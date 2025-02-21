@@ -1,34 +1,3 @@
 = 要約
 
-/* 書式確認用Dummy
-Laboris incididunt nulla tempor labore proident amet nisi irure culpa occaecat qui Lorem velit.
-Sit mollit tempor eiusmod sint do nulla Lorem laboris Lorem non aute officia. Dolor aute ipsum labore eu. Irure laborum consectetur dolore consequat.
-
-#v(2em)
-
-#figure(
-    table(
-        columns: 4,
-        [1], [foo], [bar], [baz],
-        [2], [foo], [bar], [baz],
-    ),
-    caption: [some caption],
-)
-#figure(
-    table(
-        columns: 4,
-        [1], [foo], [bar], [baz],
-        [2], [foo], [bar], [baz],
-    ),
-    caption: [some caption],
-)
-
-#v(2em)
-
-#figure(
-    $ (a, b in bb(N)) $
-)
-#figure(
-    $ (a, b in bb(N)) $
-)
-*/
+本プロジェクトでは，高速なIPC性能を持つ第3世代Capability-Based Microkernelと，そのKernel上にOperating Systemを構築するためのFramework，そしてそのFrameworkを用いてユーザレベルでメモリ管理を行うOperating Systemを開発した．開発したMicrokernelのIPC性能は世界最速レベルを達成した．
