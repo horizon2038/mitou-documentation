@@ -1,12 +1,12 @@
 #import "/components/layout.typ" : template
 
 #template(
-    project_name: [天才的なアイデアによる未踏的なシステムの実装],
-    creator: "未踏太郎",
-    project_manager: "未踏花子",
+    project_name: [Capability-Based Microkernelによる\ セキュアなユーザレベルメモリ管理システム],
+    creator: "伊組烈火",
+    project_manager: "曾川景介",
     year: 2024,
     delivery_date: datetime(year: 2025, month: 3, day: 7),
-    contract_number: "000",
+    contract_number: "168",
     [
         #include "/pages/summary.typ"
         #include "/pages/background_and_objectives.typ"
