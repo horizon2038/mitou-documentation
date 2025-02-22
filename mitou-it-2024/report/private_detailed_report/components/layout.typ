@@ -16,7 +16,7 @@
     )
     set par(
         leading: 1.24em,
-        first-line-indent: 0em,
+        first-line-indent: 1em,
     )
     set math.equation(
         numbering: "(1.1)"
@@ -59,15 +59,11 @@
 
     // font settings
     // body
-    /*
     set text(
-        font: "<font>",
+        font: "FOT-TsukuAOldMin Pr6N",
     )
-    */
     // code 
-    /*
-    show raw: set text(font: "<monospace font>")
-    */
+    show raw: set text(font: "Hack")
 
     // code block settings
     show raw: set block(fill: luma(240), inset: 2em, radius: 0.5em, width: 100%)

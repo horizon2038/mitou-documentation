@@ -4,6 +4,7 @@
 
 == 関連Webサイト
 
-// == 参考文献
+#show bibliography : set heading(level: 2)
+#bibliography("/resources/references.bib", title: "参考文献")
 
 // == Sample Codes

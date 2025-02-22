@@ -1,3 +1,3 @@
 = 要約
 
-本プロジェクトでは，高速なIPC性能を持つ第3世代Capability-Based Microkernelと，そのKernel上にOperating Systemを構築するためのFramework，そしてそのFrameworkを用いてユーザレベルでメモリ管理を行うOperating Systemを開発した．開発したMicrokernelのIPC性能は世界最速レベルを達成した．
+本プロジェクトでは，HALを備えたCapability-Based MicrokernelであるA9Nと，そのKernel上にOperating Systemを構築するためのFrameworkであるNun，そしてNunを用いて実装される, ユーザレベルでメモリ管理を実行するOperating SystemのKOITOを開発した．開発したMicrokernelのIPC性能は世界最速レベルを達成した．
