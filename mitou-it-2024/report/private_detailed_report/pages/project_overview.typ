@@ -2,8 +2,8 @@
 
 == A9N Microkernel
 
-A9N Microkernelは既存Systemの課題を解決するために設計されたMicrokernelである．
-Object-Capability ModelによるCapability-Based Securityを採用し，SecureなUser-Level Memory Managementを可能とする．
+A9N Microkernelは既存Systemの課題を解決するために設計された, HALによる移植容易性を持つMicrokernelである．
+Object-Capability ModelによるCapability-Based Securityを採用し，抽象Memory CapabilityによるSecureなUser-Level Memory Managementを可能とする．
 また，高速なIPC機構によるLow-Latencyな通信を実現する．
 
 == Nun Operating System Framework
