@@ -10,6 +10,14 @@
     contract_number: "123456",
     doc
 ) = {
+    // pdf metadata settings
+    set document(
+        title: [#{year}年度未踏IT人材発掘・育成事業 #{project_name} 成果報告書],
+        author: creator,
+        keywords: ("未踏", "未踏事業", "IPA", "情報処理推進機構", "成果報告書"),
+        date: delivery_date,
+    )
+
     // page global settings
     set page(
         margin: (x: 8em, y: 8em),
