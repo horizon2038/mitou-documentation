@@ -74,7 +74,7 @@
     show raw: set text(font: "Hack")
 
     // code block settings
-    show raw: set block(fill: luma(240), inset: 2em, radius: 0.5em, width: 100%)
+    show raw: set block(fill: luma(240), inset: 2em, radius: 0.2em, width: 100%)
 
     title_block(
         project_name: project_name,
