@@ -173,6 +173,17 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 
 === Virtual Message Register
 
+A9N MicrokernelではCapability CallのためにVirtual Message Register機構を使用する．
+Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
+
+- ArchitectureごとにVirtual Message RegisterはHardware RegisterへMapされる#footnote()[ABI項を参照]．
+- Hardware RegisterにMapできないMessage#footnote()[ABI項を参照]はProcess Control BlockごとのIPC Bufferに格納される．IPC BufferはKernelとUser間のShared Memoryであり，必ず存在が保証される．
+
+このアプローチは高速かつSecureなCapability Callを実現する．
+
+- Hardware RegisterへのAccessは一般に高速であるため，Message CopyのOverheadを最小限に抑えることができる．
+- IPC BufferはCapabilityによって存在が保証されるため，Kernel SpaceにおけるUser Space起因のPage Faultは発生しない．
+
 === Capability Callの略式表記
 
 本文書では各CapabilityごとのCapability Callを略式表記する．
@@ -186,11 +197,18 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 また，返り値は以下のようになる：
 
 #api_table(
-    "message_register[0]", "target_descriptor", "対象CapabilityへのDescriptor",
-    "message_register[1]", "operation", "対象Capabilityに対する操作",
+    "message_register[0]", "is_success", "操作の成否",
+    "message_register[1]", "error", [Capability CallのError#footnote()[現在は簡易化のためにCapability Error型のみを返しているが，将来的にこのFieldもCapability-Definedな値の返却に使用する予定である．]],
 )
 
-Message Registerは
+このようにMessage RegisterのIndex : 0とIndex : 1は予約されているが，統合されCapability Result型として使用される．
+それ以外のMessage RegisterはそれぞれのCapabilityが定義したように使用できる．
+
+したがって，各Capability Callの略式表記は以下のようになる：
+- 返り値がCapability Result型のみの場合，返り値の表記は省略する．
+- `operation`はそれぞれのCapability Callによって異なるため，その指定をLibrary Functionに内包させる．そのため，表記からは省略する．
+
+#pagebreak()
 
 === Capability Node
 
@@ -432,7 +450,7 @@ $
     0b
     overbracket(underbracket(00001000, "Depth"), "8bit")
     overbracket(underbracket(00000011, "Index"_("Node"_0)), "8bit")
-    overbracket(underbracket("XXXXXXXXXXXXXXXX", "Unused"), "remain bits")
+    overbracket(underbracket("XXXXXXXXXXXXXXXX", "Unused"), "Remain Bits")
 $ <parsed_node_1_descriptor>
 
 これも同様にDepth Bitsの妥当性を検証する．
@@ -622,7 +640,30 @@ Architecture-Specificな知識を必要としないPortableなVirtual Memory Man
 
 ==== Capability Call
 
+現時点でPage Table CapabilityにCapability Callは存在しないが，将来的にそれ自体のDepthを確認するための`get_depth`が追加される予定である．
+
 === Frame Capability
+
+Frame CapabilityはPhysical Memory Frame (i.e., Page)を抽象化したCapabilityである．
+Frame CapabilityもPage Table Capabilityと同様にAddress Space CapabilityにMap可能である．したがって，同じFrameを複数のAddress SpaceにMapすることでShared Memoryを実現することができる．
+
+==== Capability Call
+
+#technical_term(name: `get_address`)[対象Frameが指すPhysical Memory Regionの先頭Physical Addressを得る．]
+
+#figure(
+    api_table(
+        "descriptor", "memory_descriptor", "対象FrameへのDescriptor"
+    ),
+    caption: [`get_address`の引数]
+)
+
+#figure(
+    api_table(
+        "physical_address", "address", "Frameが指しているPhysical Address"
+    ),
+    caption: [`get_address`の返り値]
+)
 
 === Process Control Block Capability
 
