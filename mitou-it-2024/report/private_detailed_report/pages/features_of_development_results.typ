@@ -1,10 +1,14 @@
 = 開発成果の特徴
 
+== HAL
+
 == Capability
 
 == 高速なIPC
 
-== NunによるOSの開発
+== Virtualization
+
+== NunによるOS開発の簡易化
 
 == 先行研究
 
