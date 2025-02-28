@@ -65,7 +65,7 @@ Capability Callの実行時，First ArgumentとしてCapability Descriptorを指
 Capabilityは内部的にCapability Slotと呼ばれるデータ構造に格納される．
 Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capability Rights，Dependency Nodeから構成される．
 
-=== Capability Component
+==== Capability Component
 
 すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@capability_component)．
 Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposite Patternを統合したものであり，Capabilityの実行と初期化，探索を統一的なInterfaceによって提供する.
@@ -96,17 +96,17 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
 
 すべてのCapabilityはCapability Componentの実装である．
 
-=== Slot Local Data
+==== Slot Local Data
 
 SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．
 例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．
 しかしながらMemoryに関連するCapability(e.g., Generic, Page Table, Frame)を考えたとき，これらのために1つずつUniqueなInstanceを作成していては効率が悪い．
 よって，そのようなUsecaseに対応するためSlot Local Dataを導入した．
 対象のCapabilityはSlot Local Dataにそれらの情報を保持し，Capability Componentとして指すInstanceはCapabilityごとに単一のものを共有するようなアプローチを取ることができる．
-これにより，Memoryの新規割り当てを必要とせずにCapabilityを作成可能とした．
+これにより，Memoryの新規Allocationを必要とせずにCapabilityを作成可能とした．
 このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
 
-=== Capability Rights
+==== Capability Rights
 
 前述した通り，一部の例外を除いてCapabilityはCopyやMoveが可能である．
 CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityとして扱われる．
@@ -137,7 +137,7 @@ Capability Rightsには，先天的に設定されるものと後天的に設定
 原則として，Capabilityは作成時点にすべてのRights Bitが設定される．
 ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
 
-=== Dependency Node
+==== Dependency Node
 
 Capabilityはその依存関係をDependency Node (@dependency_node) によって管理する．
 Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
@@ -177,6 +177,21 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 - Hardware RegisterへのAccessは一般に高速であるため，Message CopyのOverheadを最小限に抑えることができる．
 - IPC BufferはCapabilityによって存在が保証されるため，Kernel SpaceにおけるUser Space起因のPage Faultは発生しない．
 
+=== Scheduler
+
+A9N MicrokernelはBenno Scheduler @ElephinstoneEtAl:2013 をProcess Schedulingに使用する．
+Benno Schedulerは従来のSchedulerとは異なり，必ず実行可能なProcessのみをQueueに保持する．
+このアプローチはQueue操作を簡易化し，なおかつHot-Cacheで実行されることによる高速化が実現される．
+その結果としてSystem全体の応答速度は向上する．
+
+=== Kernel-Level Stack
+
+A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．
+従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．
+CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Context数のScalabilityを向上させる．
+
+#pagebreak()
+
 === Capability Callの略式表記
 
 本文書では各CapabilityごとのCapability Callを略式表記する．
@@ -206,7 +221,7 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 === Capability Node
 
 Capability NodeはCapabilityを格納するためのCapabilityであり，seL4 MicrokernelにおけるCNodeの設計をベースとしている．
-1つのNodeは$2^"radix_bits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．
+1つのNodeは$2^"RadixBits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．
 したがって，論理的にはCapability NodeをCapability Slotの配列としてみなすことができる．
 
 Capability Nodeは効率のためにRadix Page Tableをベースとした木構造を取る．
@@ -399,7 +414,7 @@ $
     overbracket(underbracket(00011000, "Depth"), "8bit")
     overbracket(underbracket(00000011, "Index"_("Node"_0)), "8bit")
     overbracket(underbracket(0000000011, "Index"_("Node"_1)), "10bit")
-    overbracket(underbracket(00101, "Index"_("Node"_2)), "6bit")
+    overbracket(underbracket(000101, "Index"_("Node"_2)), "6bit")
 $ <parsed_capability_target_descriptor>
 
 まず，先頭8bitからDepth Bitsが取り出される．この場合は$"0b00011000" = "0x24"$となる．
@@ -486,7 +501,7 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
     "capability_rights", "new_rights", "新しいRights",
 )
 
-#technical_term(name: `demote`)[CapabilityのRightsを不可逆的に降格する．新しいRightsは元となるRightsのSubsetである必要がある．]
+#technical_term(name: `demote`)[Capability Rightsを不可逆的に降格する．新しいRightsは元となるRightsのSubsetである必要がある．]
 
 #api_table(
     "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
@@ -517,7 +532,7 @@ Generic Capabilityは物理的なMemoryを抽象化したCapabilityである．
 GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsから構成される．
 
 - Base AddressはGenericが指すMemory Regionの開始Physical Addressである．
-- Size Radix BitsはGenericが指すMemory RegionのSizeを示す．$2^"size_radix_bits"$が実際のSizeを表す．この事実から分かるように，GenericのSizeは必ず2の累乗byteである．
+- Size Radix BitsはGenericが指すMemory RegionのSizeを示すRadixであり，$2^"SizeRadixBits"$が実際のSizeである．この事実から分かるように，GenericのSizeは必ず2の累乗byteである．
 - WatermarkはGenericの使用状況を示すPhysical Addressである．
 - Device BitsはMemory RegionがDeviceのために使用されるような場合(e.g., MMIO)に設定される．
 
@@ -544,6 +559,37 @@ Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とす�
 ) <calculate_radix_ceil>
 
 Specific Bitsが必要となる理由は，Specific Bitsによって全体としてのSizeが決定されるCapability NodeのようなCapabilityが存在するためである．
+
+次に，Size Radix分のMemory領域がAllocate可能か確認する．Allocateした場合のWatermarkを計算し (@calculate_new_watermark) ，
+
+#figure(
+    $
+        "NewWatermark" = "SizeRadix" dot stretch(ceil.l, size: #150%) frac("Watermark", "SizeRadix") stretch(ceil.r, size: #150%)
+    $,
+    caption: "Size RadixにAlignされたWatermarkを計算"
+) <calculate_new_watermark>
+
+それが範囲内か確認する (@check_new_boundary)．
+
+#figure(
+    $
+        "NewWatermark" < "Watermark" + 2^"RadixBits" and \ 
+        "NewWatermark" + 2^"SizeRadix" * "Count" <= "BaseAddress" + 2^"RadixBits"
+    $,
+    caption: "Allocationのための境界チェック"
+) <check_new_boundary>
+
+そして，最後にAllocateを実行する．
+
+このように，すべてのCapabilityはAllocate時にAlignされる．そのため，Genericを適切に分割してからCapabilityをConvertすることで自然と*SLAB Allocator*のような振る舞いを実現する#footnote[あるCapabilityのConvertによってAlignが発生すると，次の同一CapabilityをConvertする際に隙間なくAllocateできるため．]．
+
+==== Deallocation
+
+Genericの再利用には，ConvertされたすべてのCapabilityをRemoveする必要がある．
+これはGenericに対してRevokeを実行することで再帰的に行われる．
+すなわち，ある$"Capability"_"A"$をConvertしたあとに$"Capability"_"B"$をConvertし，$"Capability"_"A"$をRemoveしても$"Capability"_"A"$が使用していた領域を再利用できない．
+これはGenericの構造を考えれば明らかである．Genericは単純化と高速化のために単一のWatermarkのみで使用量管理を実現している．したがって，高粒度な再利用をKernelは提供しない．
+その実現には，Genericから再利用単位ごとに子となるようなGenericを作成する必要がある#footnote[この実装は完全にUser-Levelで実現される．]．
 
 ==== Capability Call
 
@@ -674,7 +720,43 @@ Frame CapabilityもPage Table Capabilityと同様にAddress Space CapabilityにM
     caption: [`get_address`の返り値]
 )
 
+#pagebreak()
+
 === Process Control Block Capability
+
+Process Control Blockは，従来のSystemにおけるProcessを抽象化したCapabilityである．
+Hardware ContextとTime Slice，そしていくつかのCapabilityを持ち，SchedulerによってScheduleされる対象である．
+ただし，従来の概念とは異なり提供する機構が最小に保たれる．
+したがって，ProcessやThreadといった概念の実現にはUser-Levelでの適切なConfigurationが必要である．
+
+==== Capability
+
+Process Control BlockにはいくつかのCapabilityをConfigurationすることができる：
+
+#v(1em)
+
+#technical_term(name: "Root Node")[
+    Process Control Blockが使用するRootとなるCapability Node．
+    このProcess Control BlockがCapability Callを実行したとき，指定されたCapability DescriptorはRoot Nodeを起点に探索される．
+]
+
+#technical_term(name: "Root Address Space")[
+    Process Control BlockのVirtual Address Spaceが規定されるAddress Space Capability．
+    このCapabilityを起点としてAddress SpaceのSwitchが行われ，またVirtual Memory Managementが実現される．
+]
+
+#technical_term(name: "Buffer Frame")[
+    IPC Bufferとして使用するFrame Capability．
+    Frame Capabilityを用いることでBufferの存在を保証できる．したがって，安全にKernel-User間のCommunicationを実現できる．
+]
+
+#technical_term(name: "Resolver Port")[
+    Process Control Blockの実行中にExceptionが発生した場合に，そのStatusを送信するためのIPC Port Capability．
+    Exception Status Messageを受信した対象はその内容に応じて適切な処理を行い，Exceptionの発生元を再開できる．
+    Resolver Portが設定されていない場合はDouble Faultとして動作を停止する．
+]
+
+#pagebreak()
 
 === IPC Port Capability
 
