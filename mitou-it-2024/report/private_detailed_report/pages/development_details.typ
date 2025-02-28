@@ -14,8 +14,13 @@
 
 A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．
 Kernel内部では幅が固定された型を基本的に使用せずに`word`型を使用する．
-`word`はArchitecture-SpecificなWord幅を持つ符号なし整数型であり，`uintmax_t`のAliasとして定義される．
+`word`はArchitecture-SpecificなWord幅を持つ符号なし整数型であり，`uintmax_t`や`usize`のAliasとして定義される．
 これにより，速度と移植容易性を実現する．
+
+A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Message Register-Basedなものである．
+したがって，Kernelは多値の返却や正常値とエラー値の区別が可能な形式でUserに制御を返すことができる．
+そのため，言語のLibraryレベルでMapperを作成することにより，NativeなResult型やその他の型を返すことができる．
+このようなAPIのRustによるReference ImplementationはNun OS Frameworkに内包されている．
 
 === API Primitive
 
@@ -165,6 +170,27 @@ Dependency Nodeは依存関係にあるCapability Slotを保持するが，`dept
 Dependency Nodeは所有関係を表すものではなく，あくまでも派生と同一性を表すために利用される．
 
 #pagebreak()
+
+=== Virtual Message Register
+
+=== Capability Callの略式表記
+
+本文書では各CapabilityごとのCapability Callを略式表記する．
+通常，Capability Call全てに共通な引数は以下のようになる：
+
+#api_table(
+    "message_register[0]", "target_descriptor", "対象CapabilityへのDescriptor",
+    "message_register[1]", "operation", "対象Capabilityに対する操作",
+)
+
+また，返り値は以下のようになる：
+
+#api_table(
+    "message_register[0]", "target_descriptor", "対象CapabilityへのDescriptor",
+    "message_register[1]", "operation", "対象Capabilityに対する操作",
+)
+
+Message Registerは
 
 === Capability Node
 
@@ -489,43 +515,112 @@ GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsか�
 - Device BitsはMemory RegionがDeviceのために使用されるような場合(e.g., MMIO)に設定される．
 
 Generic CapabilityはすべてのCapabilityを作成するためのFactoryとして機能する．
-Convert操作 (@generic::convert) によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
+Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
 作成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
 
 === Capability Call
 
 #technical_term(name: `convert`)[Generic Capabilityの領域を指定されたCapability Typeに変換する．]
 
-#figure(
-    api_table(
-        "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
-        "capability_type", "type", "作成するCapabilityのType",
-        "word", "specific_bits", [Capability作成時に使用する固有Bits \ cf., @generic::specific_bits],
-        "word", "count", "作成するCapabilityの個数",
-        "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
-        "word", "node_index", "格納先NodeのIndex",
-    ),
-    caption: "GenericのConvert操作",
-) <generic::convert>
+#api_table(
+    "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
+    "capability_type", "type", "作成するCapabilityのType",
+    "word", "specific_bits", [Capability作成時に使用する固有Bits \ cf., @generic::specific_bits],
+    "word", "count", "作成するCapabilityの個数",
+    "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
+    "word", "node_index", "格納先NodeのIndex",
+)
+
+Specific BitsはCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
 
 #figure(
     normal_table(
         "Capability Node", [NodeのSlot数を表すRadix ($"count" = 2^"specific_bits"$)],
         "Generic", [GenericのSizeを表すRadix ($"size" = 2^"specific_bits"$)],
-        "Process Control Block", "-",
-        "IPC Port", "-",
-        "Interrupt Port", "-",
+        "Address Space", "-",
         "Page Table", "depth",
         "Frame", "-",
+        "Process Control Block", "-",
+        "IPC Port", "-",
+        "Notification Port", "-",
+        "Interrupt Region", "-",
+        "Interrupt Port", "-",
         "Virtual CPU", "-",
+        "Virtual Address Space", "-",
         "Virtual Page Table", "-",
     ),
     caption: "generic::specific_bits",
 ) <generic::specific_bits>
 
+#pagebreak()
+
 === Address Space Capability
 
+Address Space CapabiltyはVirtual Address Spaceを抽象化したCapabilityである．すべての実行可能なContextはAddress Space Capabilityを持ち，Context Switch時に切り替えることでAddress Spaceを切り替える．
+異なる2つのProcess Control Blockに同一のAddress Space Capabilityを設定することで，同一のVirtual Address Spaceを共有し，いわゆるThreadをUser-Levelで実現することができる．
+
+Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping可能である．これにより，User-LevelでVirtual Memory Managementを実現することができる．
+
+==== Capability Call
+
+#technical_term(name: `map`)[Page TableやFrameをVirtual Address SpaceにMapする．]
+
+#api_table(
+    "descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor",
+    "descriptor", "target_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
+    "virtual_address", "address", "Mapする仮想アドレス",
+    "memory_attribute", "attribute", "Mapに使用する属性",
+)
+
+#technical_term(name: `unmap`)[Page TableやFrameをVirtual Address SpaceからUnmapする．]
+
+#api_table(
+    "descriptor", "page_table_descriptor", "対象Address SpaceへのDescriptor",
+    "descriptor", "target_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
+    "virtual_address", "address", "Unmapする仮想アドレス",
+)
+
+#technical_term(name: `get_unset_depth`)[Address Spaceに仮想アドレスをMapするうえで，まだMapされていないPage TableのDepthを取得する．]
+
+#figure(
+    api_table(
+        "descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor"
+    ),
+    caption: [`get_unset_depth`の引数]
+)
+
+#figure(
+    api_table(
+        "word", "depth", "MapされていないPage TableのDepth"
+    ),
+    caption: [`get_unset_depth`の返り値]
+)
+
+#pagebreak()
+
 === Page Table Capability
+
+Page Table CapabilityはPage Tableをそのまま抽象化したCapabilityである．
+Page Table CapabilityはAddress Space CapabilityにMap可能であり，Virtual Address Spaceに対するPage TableのMappingを行う．
+使用時にArchitecture-Specificな知識を必要とせず，階層構造はDepthによって管理される．
+
+x86_64におけるPage Tableを例示する．
+x86_64 Architectureは通常4レベルのPage Tableを持つ．
+まだPage TableがMapされていない状態を仮定してVirtual AddressをMapすることを考える．
++ PML4はAddress Space Capabilityそのものである．
++ PDPTはDepth : 3のPage Table Capabilityである．
++ PDはDepth : 2のPage Table Capabilityである．
++ PTはDepth : 1のPage Table Capabilityである．
+以上3つのPage TableをAddress SpaceにMap後，Address Spaceの`get_unset_depth`を実行すると0が返される．
+Depth : 0はFrame Capabilityに対応するため，これをMapすることでVirtual Address Spaceに対するMappingが完了する．
+
+==== Architecture-IndependentなVirtual Memory Management
+
+Architecture-Specificな知識を必要としないPortableなVirtual Memory Management Serverを実現する場合，典型的にはまず空のAddress Space Capabilityに対して`get_unset_depth`を実行することが推奨される．ここで得た値はそのまま必要なPage Tableの数とDepthに対応するためである．
+
+もちろん，簡易化のために初めからDepthを指定してPage Table Capabilityを作成することも可能である．このような実装はSystemのPortabilityを損なうが，Project開始時のPrototypeとしては有用である．
+
+==== Capability Call
 
 === Frame Capability
 
