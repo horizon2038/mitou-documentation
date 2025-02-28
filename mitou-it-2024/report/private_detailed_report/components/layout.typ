@@ -63,6 +63,15 @@
             #v(1em)
         ]
     }
+    show heading.where(level: 4): it => {
+        block(width:100%)[
+            #v(1em)
+            #set align(left)
+            #set text(13pt, weight: "regular")
+            #it
+            #v(1em)
+        ]
+    }
     set heading(numbering: "1.")
 
     // font settings
