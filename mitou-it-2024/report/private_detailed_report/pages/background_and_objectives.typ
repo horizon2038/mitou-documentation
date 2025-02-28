@@ -38,9 +38,7 @@ KernelはHardwareなどの抽象度が異なるLayerを直接操作するもの�
 このように，一枚岩のMonolithicなKernel (@monolithic_kernel) やOSはもはや現代の要求に適合しない．
 したがって，これを置き換える新たなアーキテクチャが求められている．
 
-#v(1em)
 #draw_monolithic_kernel() <monolithic_kernel>
-#v(1em)
 
 == Microkernelとその限界
 
@@ -49,9 +47,7 @@ KernelはHardwareなどの抽象度が異なるLayerを直接操作するもの�
 このArchitectureでは，ほぼ全てのDevice DriverやFile System，Network Stackといった機能はKernel SpaceからUser Spaceへ移動される．したがって，不安定なDevice DriverがCrashしてもKernelがダウンすることはない．
 また，Systemの構成を要件に合わせてDynamicに変更することも容易となる．この仕組みはPolicy/Mechanism Separation @LevinEtAl:1975 を満たすものである．
 
-#v(1em)
 #draw_microkernel() <microkernel>
-#v(1em)
 
 このアプローチは一見完璧なように見えるが，実際にはいくつかの問題が存在する．
 

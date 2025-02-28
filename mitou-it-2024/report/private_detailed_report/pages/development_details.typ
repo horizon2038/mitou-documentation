@@ -53,14 +53,12 @@ A9N Microkernelにおいて，操作対象のCapabilityを指定するためにC
 Capability Descriptorは後述するCapability Nodeを再帰的に探索するためのAddressである．
 Capability Callの実行時，First ArgumentとしてCapability Descriptorを指定する (@capability_call_pseudo_code) ことでRoot Capability Nodeから対象が暗黙的に探索される．
 
-#v(1em)
 #figure(
     ```rust
     fn capability_call(target: capability_descriptor, args ...) -> capability_result
     ```,
     caption: "Capability CallのPseudo Code",
 ) <capability_call_pseudo_code>
-#v(1em)
 
 === Capability Slot
 
@@ -72,7 +70,6 @@ Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capabili
 すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@capability_component)．
 Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposite Patternを統合したものであり，Capabilityの実行と初期化，探索を統一的なInterfaceによって提供する.
 
-#v(1em)
 #figure(
     ```cpp
     class capability_component
@@ -96,7 +93,6 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
     ```,
     caption: "Capability ComponentのInterface",
 ) <capability_component>
-#v(1em)
 
 すべてのCapabilityはCapability Componentの実装である．
 
@@ -120,7 +116,6 @@ CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityと
 このようなシナリオに対応するため，Capability Slot固有のCapability Rightsを導入した．
 Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@capability_rights)．
 
-#v(1em)
 #figure(
     ```cpp
     enum object_rights : uint8_t
@@ -137,7 +132,6 @@ Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御�
     ```,
     caption: "Capability Rightsの定義",
 ) <capability_rights>
-#v(1em)
 
 Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．
 原則として，Capabilityは作成時点にすべてのRights Bitが設定される．
@@ -148,7 +142,6 @@ Capability Rightsには，先天的に設定されるものと後天的に設定
 Capabilityはその依存関係をDependency Node (@dependency_node) によって管理する．
 Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
 
-#v(1em)
 #figure(
     ```cpp
     struct capability_slot
@@ -173,7 +166,7 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 
 === Virtual Message Register
 
-A9N MicrokernelではCapability CallのためにVirtual Message Register機構を使用する．
+A9N MicrokernelではCapability CallのためにVirtual Message Register#footnote[L4 Microkernel FamilyにおけるUTCBと同等]機構を使用する．
 Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
 
 - ArchitectureごとにVirtual Message RegisterはHardware RegisterへMapされる#footnote()[ABI項を参照]．
@@ -231,7 +224,6 @@ Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，こ
 + Node Indexを用いてSlotを取得し，次の探査対象とする．
 + 3で取得したSlotからCapability Componentを取得し，再帰的に`taverse_slot`を呼び出す．
 
-#v(1em)
 #figure(
     ```cpp
 inline const a9n::word capability_node::calculate_capability_index(
@@ -253,7 +245,6 @@ inline const a9n::word capability_node::calculate_capability_index(
     ```,
     caption: "Node Indexの取得",
 ) <calculate_capability_index>
-#v(1em)
 
 Node以外のCapability Component実装は，`retrieve_slot`や`traverse_slot`の呼び出し時に`capability_lookup_error::TERMINAL`を返す．この機構により，どのCapability Componentを呼び出すかに関わらずCapability Nodeの探索を行うことができる．
 
@@ -301,7 +292,6 @@ $ log_2(64) = 6 $
 
 これを図示すると (@capability_node_example) になる．
 
-#v(1em)
 #figure([
     #cetz.canvas({
         import cetz.draw: *  // Import necessary drawing functions
@@ -389,7 +379,6 @@ $ log_2(64) = 6 $
     ],
     caption: "Capability構成の例"
 ) <capability_node_example>
-#v(1em)
 
 ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは (@capability_target_descriptor) のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
 
@@ -536,7 +525,27 @@ Generic CapabilityはすべてのCapabilityを作成するためのFactoryとし
 Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
 作成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
 
-=== Capability Call
+==== $log_2$ Based Allocation
+
+GenericのConvert操作時，次のステップでCapabilityを作成する：
+
++ Convert操作によって指定されたCapability TypeとSpecific BitsからSize Radixを得る．
++ Size Radix分をAllocate可能か確認する．
++ WatermarkをSize RadixにAlign(Ceil)し，WatermarkにSize Radix分を加算する．
+
+#v(1em)
+
+まず，引数として与えられたCapability TypeとSpecific BitsからSize Radixを取得する．
+Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とする対数をとる (@calculate_radix_ceil)．
+
+#figure(
+    $ "SizeRadix" = ceil.l log_2("Sizeof"("Object")) ceil.r $,
+    caption: "Size Radixの計算"
+) <calculate_radix_ceil>
+
+Specific Bitsが必要となる理由は，Specific Bitsによって全体としてのSizeが決定されるCapability NodeのようなCapabilityが存在するためである．
+
+==== Capability Call
 
 #technical_term(name: `convert`)[Generic Capabilityの領域を指定されたCapability Typeに変換する．]
 
