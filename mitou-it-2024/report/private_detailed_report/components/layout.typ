@@ -74,6 +74,13 @@
     }
     set heading(numbering: "1.")
 
+    // figure settings
+    show figure: it => {
+        v(1em)
+        it
+        v(1em)
+    }
+
     // font settings
     // body
     set text(
