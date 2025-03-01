@@ -99,7 +99,7 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
 
 すべてのCapabilityはCapability Componentの実装である．
 
-==== Slot Local Data
+==== Slot Local Data <slot_local_data>
 
 SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．
 例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．
@@ -109,7 +109,7 @@ SlotにCapability ComponentへのPointerを格納するだけでは問題が生�
 これにより，Memoryの新規Allocationを必要とせずにCapabilityを作成可能とした．
 このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
 
-==== Capability Rights
+==== Capability Rights <capability_rights>
 
 前述した通り，一部の例外を除いてCapabilityはCopyやMoveが可能である．
 CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityとして扱われる．
@@ -117,7 +117,7 @@ CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityと
 しかし，これらのCapabilityに対して別々のアクセス制御を実行したいUsecaseが存在する．
 典型例として，IPC Port Capabilityを親が子に共有するが，子からはこのCapabilityを削除できないようにしたい#footnote()[Dependency Nodeを除いて親や子といった概念はKernelに存在しない．これはKernelを使用するOS Layerでみたときの例である．]場合がある．
 このようなシナリオに対応するため，Capability Slot固有のCapability Rightsを導入した．
-Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@capability_rights)．
+Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@capability_rights_definition)．
 
 #figure(
     ```cpp
@@ -134,15 +134,15 @@ Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御�
 
     ```,
     caption: "Capability Rightsの定義",
-) <capability_rights>
+) <capability_rights_definition>
 
 Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．
 原則として，Capabilityは作成時点にすべてのRights Bitが設定される．
 ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
 
-==== Dependency Node
+==== Dependency Node <dependency_node>
 
-Capabilityはその依存関係をDependency Node (@dependency_node) によって管理する．
+Capabilityはその依存関係をDependency Node (@dependency_node_definition) によって管理する．
 Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
 
 #figure(
@@ -157,7 +157,7 @@ Dependency Nodeは依存関係にあるCapability Slotを保持するが，`dept
     };
     ```,
     caption: "Capability SlotのDependency Node部",
-) <dependency_node>
+) <dependency_node_definition>
 
 - 親の区別は可能だが，通常使用されないため省略される．
 - `next_slot`もしくは`preview_slot`の`depth`が自分自身の`depth`と等しい場合，そのSlotは兄弟である．
@@ -167,7 +167,7 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 
 #pagebreak()
 
-=== Virtual Message Register
+=== Virtual Message Register <virtual_message_register>
 
 A9N MicrokernelではCapability CallのためにVirtual Message Register#footnote[L4 Microkernel FamilyにおけるUTCBと同等]機構を使用する．
 Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
@@ -180,7 +180,7 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 - Hardware RegisterへのAccessは一般に高速であるため，Message CopyのOverheadを最小限に抑えることができる．
 - IPC BufferはCapabilityによって存在が保証されるため，Kernel SpaceにおけるUser Space起因のPage Faultは発生しない．
 
-=== Scheduler
+=== Scheduler <scheduler>
 
 A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．
 Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持つ．
@@ -188,7 +188,7 @@ Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持
 このアプローチはQueue操作を簡易化し，なおかつHot-Cache内の実行による高速化を実現することができる．
 その結果，SystemはLow Latencyとなる．
 
-=== Kernel-Level Stack
+=== Kernel-Level Stack <kernel_stack>
 
 A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．
 従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．
@@ -224,7 +224,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 #pagebreak()
 
-=== Capability Node
+=== Capability Node <capability_node>
 
 Capability NodeはCapabilityを格納するためのCapabilityであり，seL4 MicrokernelにおけるCNodeの設計をベースとしている．
 1つのNodeは$2^"RadixBits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．
@@ -269,7 +269,7 @@ inline const a9n::word capability_node::calculate_capability_index(
 
 Node以外のCapability Component実装は，`retrieve_slot`や`traverse_slot`の呼び出し時に`capability_lookup_error::TERMINAL`を返す．この機構により，どのCapability Componentを呼び出すかに関わらずCapability Nodeの探索を行うことができる．
 
-==== Addressing
+==== Addressing <capability_node::addressing>
 
 Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．
 Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@capability_descriptor)，Capability Nodeの探索上限を示す．
@@ -757,7 +757,7 @@ Process Control BlockにはいくつかのCapabilityをConfigurationすること
 ]
 
 #technical_term(name: "Resolver Port")[
-    Process Control Blockの実行中にExceptionが発生した場合に，そのStatusを送信するためのIPC Port Capability．
+    Process Control Blockの実行中にExceptionが発生した場合に，そのStatusをFault Callとして送信するためのIPC Port Capability．
     Exception Status Messageを受信した対象はその内容に応じて適切な処理を行い，Exceptionの発生元を再開できる．
     Exceptionの発生時にResolver Portが設定されていない場合はDouble Faultとして動作を停止する．
 
@@ -1074,15 +1074,151 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     ) <ipc_port::reply_receive_pseudo_code>
 ]
 
-==== Direct Context Switch
+==== Direct Context Switch <ipc_port::direct_context_switch>
 
-// A9N MicrokernelとIPC Port，そしてSchedulerはDirect Context Switch @ElphinstoneEtAl:2013 のための機構を備える．
 MicrokernelにおいてIPCは極めてCriticalな操作であり，可能な限りLow Latencyで実行する必要がある．
-そのため，Direct Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限りSenderからReceiverへ，またその逆を直接Context Switchする．
+そのためDirect Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限り#footnote[Schedulerに対象よりも高い優先度のContextが存在せず，なおかつ実行可能な場合を指す．]SenderからReceiverへ，またその逆のContextを直接Switchする．
+
+==== Identifier <ipc_port::identifier>
+
+同じIPC Portを共有(Copy)することでIPCは実現されるが，どのContextからMessageが送信されたかを判別するためにIdentifier機構を実装した．
+IdentifierはFiasco.OCにおけるLabelやseL4におけるBadgeに相当する，Kernelによって正当性が保証されるCapability Slot固有の値である．
+
+送信元の識別を如何に実装するかを考える．
+通常のMicrokernelにおいてSenderの識別はPIDやTIDによって行われるが，A9N MicrokernelはGlobalなIDを採用していない．したがって異なるアプローチが必要である．
+Kernel-LevelのPIDやTIDが存在しない場合，IPC Messageのある領域をOSが予約しIDとする実装が考えられる．しかしこれは単なるProtocolに過ぎず，各Contextは自由に改竄できるため信頼性が低い．
+これを解決するのがIdentifierであり，User-Levelにおける柔軟かつSecureなContextの識別を実現する．
+
+IPC Portに対するIdentify操作により，Word型の値をIPC Port(が格納されているSlot)に設定できる．
+この値はSlot Local Data (@slot_local_data) に格納されるため，同じIPC Portを共有するContextごとに設定可能#footnote[実際にはSlot Levelで設定可能なため，各ContextがIdentifierを複数個持つこともできる．]である．
+そして，この値はIPCの各操作ごとにKernelの手で転送される．
+
+あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights (@capability_rights) からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
+
+==== Capability Transfer <ipc_port::capability_transfer>
+
+A9N MicrokernelはIPCを通じてCapabilityを転送 (Copy) できる．
+
+- 送信者はIPC BufferのTransfer Source Descriptors Fieldに転送したいCapability Descriptorを設定する．転送の成功時，このFieldは0にリセットされる．
+- 受信者はIPC BufferのTransfer Destination Node Fieldに転送されたCapabilityを格納するNodeへのCapability Descriptorを設定し，またTransfer Destination Index Fieldに格納先NodeのIndex (Offset) を設定する．
+
+Capability Transferは必ずIPC Bufferを介して行われるため，Virtual Message Register (@virtual_message_register) におけるHardware Registerが使用されない．したがって，Hardware Registerに格納可能なMessageのみで完結するIPCよりもやや低速である．
+
+==== Data Structure
+
+#technical_term(name: `message_info`)[
+    IPCの細かい挙動を制御するための構造である．
+    送信者はこの構造を設定し，受信者は受け取ることによって情報を取得できる．
+]
+
+#bytefield(
+    bpr: 16,
+    rows: (8em),
+    bitheader(
+        "bounds",
+        0,
+        8,
+        15,
+        text-size: 8pt,
+    ),
+
+    flag[BLOCK],
+    bytes(1)[MESSAGE_LENGTH],
+    bits(6)[TRANSFER_COUNT],
+    flag[KERNEL],
+    text-size: 4pt,
+)
+
+#normal_table(
+    "BLOCK", "設定されている場合，IPC操作はBlockされる",
+    "MESSAGE_LENGTH", "Messageの長さ (WORD_BITS単位)",
+    "TRANSFER_COUNT", "TransferするCapabilityの数",
+    "KERNEL", "設定されていた場合，MessageはKernelからのものであることを示す. 基本的にはFault Callのために使用され，UserがこのFlagを設定しても無視される．",
+)
+
 
 ==== Capability Call
 
 A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくまでもIPC Portに対するCapability Callとして提供される．
+
+#v(1em)
+
+#technical_term(name: `send`)[IPC PortにMessageを送信する．]
+
+#api_table(
+    "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+    "message_info", "info", "送信するMessageの情報",
+)
+
+#technical_term(name: `receive`)[IPC PortからMessageを受信する．]
+
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+    ),
+    caption: [`receive`の引数]
+)
+
+#figure(
+    api_table(
+        "message_info", "info", "受信したMessageの情報",
+        "word", "identifer", "送信元のIdentifier",
+        "word[n]", "messages", "受信したMessage",
+    ),
+    caption: [`receive`の戻り値]
+)
+
+#technical_term(name: `call`)[IPC Portに対してCallを実行する．]
+
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+        "message_info", "info", "送信するMessageの情報",
+    ),
+    caption: [`call`の引数]
+)
+
+#figure(
+    api_table(
+        "message_info", "info", "受信したMessageの情報",
+        "word", "identifer", "送信元のIdentifier",
+        "word[n]", "messages", "受信したMessage",
+    ),
+    caption: [`call`の戻り値]
+)
+
+#technical_term(name: `reply`)[IPC Portに対してReplyを実行する．]
+
+#api_table(
+    "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
+    "message_info", "info", "送信 (Reply) するMessageの情報",
+)
+
+#technical_term(name: `reply_receive`)[IPC Portに対してReply Receiveを実行する．]
+
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor],
+        "message_info", "info", "送信 (Reply) するMessageの情報",
+    ),
+    caption: [`reply_receive`の引数]
+)
+
+#figure(
+    api_table(
+        "message_info", "info", "受信したMessageの情報",
+        "word", "identifer", "送信元 (Caller) のIdentifier",
+        "word[n]", "messages", "受信したMessage",
+    ),
+    caption: [`reply_receive`の戻り値]
+)
+
+#technical_term(name: `identify`)[IPC Portに対してSlot-LocalなIdentifierを設定する．]
+
+#api_table(
+    "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+    "word", "identifier", "IPC Portに付与するIdentifier",
+)
 
 #pagebreak()
 
