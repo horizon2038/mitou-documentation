@@ -10,6 +10,8 @@
 
 == A9N Microkernelの開発
 
+=== History of A9N Microkernel
+
 === Basic Types
 
 A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．
@@ -179,9 +181,9 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 
 === Scheduler
 
-A9N MicrokernelはBenno Scheduler @ElephinstoneEtAl:2013 をProcess Schedulingに使用する．
+A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．
 Benno Schedulerは従来のSchedulerとは異なり，必ず実行可能なProcessのみをQueueに保持する．
-このアプローチはQueue操作を簡易化し，なおかつHot-Cacheで実行されることによる高速化が実現される．
+このアプローチはQueue操作を簡易化し，なおかつHot-Cache内で実行されやすくなり高速化される．
 その結果としてSystem全体の応答速度は向上する．
 
 === Kernel-Level Stack
@@ -189,6 +191,8 @@ Benno Schedulerは従来のSchedulerとは異なり，必ず実行可能なProce
 A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．
 従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．
 CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Context数のScalabilityを向上させる．
+
+// TODO: いい感じの図を作る
 
 #pagebreak()
 
@@ -213,7 +217,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 それ以外のMessage RegisterはそれぞれのCapabilityが定義したように使用できる．
 
 したがって，各Capability Callの略式表記は以下のようになる：
-- 返り値がCapability Result型のみの場合，返り値の表記は省略する．
+- 返り値がCapability Result型のみの場合，返り値の表記は省略する．返り値が存在する場合はそれを記述するが，Capability Resultは省略する．
 - `operation`はそれぞれのCapability Callによって異なるため，その指定をLibrary Functionに内包させる．そのため，表記からは省略する．
 
 #pagebreak()
@@ -402,7 +406,7 @@ $ log_2(64) = 6 $
 // 000000 0011 = 0x03 (node_1)
 //     00 0101 = 0x04 (node_2)
 #text()[$
-    "descriptor"        &:= &"0x"&"180300C5" &("hex") \ 
+    "capability_descriptor"        &:= &"0x"&"180300C5" &("hex") \ 
                         &:= &"0b"&"00011000000000110000000011000101" &("bin")
 $] <capability_target_descriptor>
 // 00011000'00000011'00000000'11000101
@@ -444,7 +448,7 @@ $ <capability_max_depth>
 次の例として，$"Node"_1$を対象にCapability Callを実行したい場合を考えると，Capability Descriptorは (@capability_node_1_descriptor) のようになる:
 
 #text()[$
-    "descriptor"        &:= &"0x"&"803xxxx" &("hex") \ 
+    "capability_descriptor"        &:= &"0x"&"803xxxx" &("hex") \ 
                         &:= &"0b"&"0000100000000011 xxxxxxxxxxxxxxxx" &("bin")
 $] <capability_node_1_descriptor>
 
@@ -639,8 +643,8 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 #technical_term(name: `map`)[Page TableやFrameをVirtual Address SpaceにMapする．]
 
 #api_table(
-    "descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor",
-    "descriptor", "target_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
+    "capability_descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor",
+    "capability_descriptor", "target_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
     "virtual_address", "address", "Mapする仮想アドレス",
     "memory_attribute", "attribute", "Mapに使用する属性",
 )
@@ -648,8 +652,8 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 #technical_term(name: `unmap`)[Page TableやFrameをVirtual Address SpaceからUnmapする．]
 
 #api_table(
-    "descriptor", "page_table_descriptor", "対象Address SpaceへのDescriptor",
-    "descriptor", "target_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
+    "capability_descriptor", "page_table_descriptor", "対象Address SpaceへのDescriptor",
+    "capability_descriptor", "target_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
     "virtual_address", "address", "Unmapする仮想アドレス",
 )
 
@@ -657,7 +661,7 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 
 #figure(
     api_table(
-        "descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor"
+        "capability_descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor"
     ),
     caption: [`get_unset_depth`の引数]
 )
@@ -708,7 +712,7 @@ Frame CapabilityもPage Table Capabilityと同様にAddress Space CapabilityにM
 
 #figure(
     api_table(
-        "descriptor", "memory_descriptor", "対象FrameへのDescriptor"
+        "capability_descriptor", "memory_descriptor", "対象FrameへのDescriptor"
     ),
     caption: [`get_address`の引数]
 )
@@ -753,12 +757,226 @@ Process Control BlockにはいくつかのCapabilityをConfigurationすること
 #technical_term(name: "Resolver Port")[
     Process Control Blockの実行中にExceptionが発生した場合に，そのStatusを送信するためのIPC Port Capability．
     Exception Status Messageを受信した対象はその内容に応じて適切な処理を行い，Exceptionの発生元を再開できる．
-    Resolver Portが設定されていない場合はDouble Faultとして動作を停止する．
+    Exceptionの発生時にResolver Portが設定されていない場合はDouble Faultとして動作を停止する．
+
+    // TODO: いい感じの図を作る
 ]
+
+Process Control Blockに必要なCapabilitiyをConfiguration後#footnote[Root Address Spaceは必須だが，その他のCapabilityはあくまでもOptionalである]，Resume操作を実行することでSchedulerのQueueに登録される．
+Benno Schedulerは前述の通り実行可能なContextのみをQueueとして持つため，PriorityやTime Sliceが考慮されたあとに実行が行われる．
+
+==== Capability Call
+
+#technical_term(name: `configure`)[Process Control BlockをConfigurationする．]
+
+#api_table(
+    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+    "configuration_info", "info", [cf., @process_control_block::configuration_info],
+    "capability_descriptor", "root_page_table", "Root Page TableへのDescriptor",
+    "capability_descriptor", "root_node", "Root NodeへのDescriptor",
+    "capability_descriptor", "frame_ipc_buffer", "IPC BufferとしたいFrameへのDescriptor",
+    "capability_descriptor", "notification_port", "Notification PortへのDescriptor",
+    "capability_descriptor", "ipc_port_resolver", "ResolverとしたいIPC PortのDescriptor",
+    "virtual_address", "instruction_pointer", "Instruction Pointer",
+    "virtual_address", "stack_pointer", "Stack Pointer",
+    "virtual_address", "thread_local_base", "Thread Local Base",
+    "word", "priority", "優先度",
+    "word", "affinity", "SMP環境におけるAffinity (CPU CoreのIndex)",
+)
+
+Performanceのため，Process Control Blockにおける各ParameterはConfiguration Info (@process_control_block::configuration_info)によって一括してConfigurationできる．
+
+#figure(
+    bytefield(
+        bpr: 16,
+        rows: (14em),
+        bitheader(
+            "bounds",
+            0,
+            8,
+            15,
+            text-size: 8pt,
+        ),
+
+        flag[ROOT_PAGE_TABLE],
+        flag[ROOT_NODE],
+        flag[FRAME_IPC_BUFFER],
+        flag[NOTIFICATION_PORT],
+        flag[IPC_PORT_RESOLVER],
+        flag[INSTRUCTION_POINTER],
+        flag[STACK_POINTER],
+        flag[THREAD_LOCAL_BASE],
+        flag[PRIORITY],
+        flag[AFFINITY],
+        bits(6)[RESERVED],
+
+        text-size: 4pt,
+    ),
+    caption: "Configuration Info"
+) <process_control_block::configuration_info>
+
+Configuration Infoの各BitがそれぞれのFieldに対応する．
+このBitが立っている場合，そのFieldがConfigurationされる．逆に言えば，立っていない場合そのFieldに対応する引数は無視される．
+
+#v(1em)
+
+#technical_term(name: `read_register`)[
+    Process Control BlockのRegister (Hardware Context) を読み出す．
+    読み出したRegisterはMessage RegisterのIndex:3#footnote[Index:0とIndex:1はCapability Resultによって予約されている．また，そのまま`write_register`を実行してコピーを可能とするためにIndex:2も予約されている．]から
+    n#footnote[Architectureに依存．詳細はABIを参照．]へ格納される．
+]
+
+#figure(
+    api_table(
+        "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+        "word", "register_count", "読み出すRegisterの数",
+    ),
+    caption: [`read_register`の引数]
+)
+
+#figure(
+    api_table(
+        "word[n]", "registers", "読み出したRegisterの値",
+    ),
+    caption: [`read_register`の返り値]
+)
+
+#technical_term(name: `write_register`)[
+    Process Control BlockにRegister (Hardware Context) を書き込む．
+    Message RegisterのIndex:3からIndex:nを読み出し，対象Process Control BlockのRegisterに書き込む．
+]
+
+#api_table(
+    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+    "word", "register_count", "書き込むRegisterの数",
+    "word[n]", "registers", "書き込むRegisterの値",
+)
+
+#technical_term(name: `resume`)[Process Control Blockを実行可能状態にし，SchedulerのQueueに追加する．]
+
+#api_table(
+    "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+)
+
+#technical_term(name: `suspend`)[Process Control Blockを休止状態にする#footnote[休止状態のProcess Control BlockはQueueに追加されない．したがって，明示的に再開するまで実行されない．]．]
+
+#api_table(
+    "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+)
 
 #pagebreak()
 
 === IPC Port Capability
+
+A9N MicrokernelはIPC PortによるRendezvous Indirect IPCを採用している．
+ある実行可能なContextがIPC PortへMessageをSendすると，同じIPC Portを持つ他のContextがそのMessageをReceiveできる．
+SenderとReceiverは1:nもしくはn:1の関係を持つ．
+
+例えばある$"IPCPort"_"A"$が存在したとして，$"Context"_"A"$が$"IPCPort"_"A"$にSend操作を実行したとする．
+この状態ではReceiverとなるContextが存在しないため，$"Context"_"A"$はBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
+さらに$"Context"_"B"$が$"IPCPort"_"A"$へSend操作を実行すると，やはりReceiverが存在しないためBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
+ここで，Receiverとなる$"Context"_"C"$が$"IPCPort"_"A"$へReceive操作を実行すると，$"IPCPort"_"A"$が持つWait Queueの先頭から$"Context"_"A"$が取り出され，$"Context"_"A"$の持っていたMessageが$"Context"_"C"$にCopyされる．
+このを例を図示すると (@ipc_port::send_receive_example) のようになる．
+
+#figure([
+    #import "@preview/fletcher:0.5.5" as fletcher: diagram, node, edge
+
+    // utility
+    #let sender(name, pos) = (node((pos), name))
+    #let receiver(name, pos) = (node((pos), name))
+
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: 4em,
+        node-inset: 1em,
+
+
+        // draw nodes
+        sender([$"Context"_"A"$], (0, 0)),
+        sender([$"Context"_"B"$], (0, 1)),
+        node((2, 0.5), "IPC Port"),
+        receiver([$"Context"_"C"$], (4, 0.5)),
+        // dirty hack
+        edge((0, 1), (0.75, 1), (0.75, 0.5), (2, 0.5), "-|>", label-side: center, label-pos: 85%),
+        edge((0, 0), (0.75, 0), (0.75, 0.5), (2, 0.5), [`send`], "-|>", label-side: center, label-pos: 85%),
+        // edge((0, 1), (2, 0.5), [`send`], "-|>"),
+        edge((0, 0), (2, 0),(2, 0.5), box(inset: 0em)[Enqueue], "-|>", label-pos: 20%),
+        edge((0, 1), (2, 1),(2, 0.5), box(inset: 1em)[Enqueue], "-|>", label-pos: 20%, label-anchor: "north"),
+        edge((4, 0.5), (2, 0.5), [`receive`], "-|>"),
+        edge((4, 0.5), (3.45, 0.5), (3.45, 0), (2, 0), (2, 0.5), [Dequeue], "-|>", label-pos: 58%, label-anchor: "south"),
+        edge((0, 0), (0, -0.5), (4, -0.5), (4, 0.5), [Send Message], "..|>"),
+    )
+    ],
+    caption: "IPC Send/Receive Example"
+) <ipc_port::send_receive_example>
+
+この例はSender:Receiverがn:1の場合を示すが，Sender:Receiverが1:nの場合も同様である．
+
+ここで重要なのが，IPC PortはMessageをBufferingしないという事実だ．IPC PortはSender/ReceiverのQueueを保持するが，これはMessageのQueueではない．
+MessageはSenderのVirtual Message RegisterからReceiverのVirtual Message Registerへ*直接*Copyされるため高速である．
+
+==== Non-Blocking IPC
+
+SendやReceive操作はNon-Blockingで実行することも可能である．
+基本的には前節と同様だが，QueueにSender/Receiverが存在しない場合Blockせず即座にReturnする．
+
+==== Call/Reply Mechanism
+
+先述したSendやReceive操作は一方向の通信であり，基本的に使用は推奨されない．
+そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Modelに特化した操作の仕様が推奨される．
+
+#v(1em)
+#technical_term(name: `call`)[
+    IPC Portから取得したContextに対してSendしReplyを待つ．
+    概念的にはSendとReceiveを組み合わせたものに近いが，この操作を実行したContextから見たときAtomicに送受信が実行される点が異なる．
+    言い換えると，MessageをSendした対象であるReceiverからMessageを受信することを保証できる．
+
+    この操作を実現するため，Call時にそのCallerはReceiverへReply Objectを設定する．
+    このReply ObjectはReply StateとReply Target部によって構成される．
+
+    Reply StateはReply Objectの状態を示し，SourceとDestinationの2つが存在する．
+    Callを実行し，Replyを待っている場合にWAITが設定される．
+    
+
+    ```cpp
+    enum class source_reply_state_object : a9n::word
+    {
+        NONE,
+        WAIT,
+    } source_reply_state { source_reply_state_object::NONE };
+
+    enum class destination_reply_state_object : a9n::word
+    {
+        NONE,
+        READY_TO_REPLY,
+    } destination_reply_state { destination_reply_state_object::NONE };
+
+    // NOTE: *Why do we need source_reply_target?*
+    // Suppose that process A is in the middle of a call to process B and A is destroyed (e.g.,
+    // via Revoke/Remove). Although process B has A as the reply target, it will hold a pointer
+    // to an invalid process (A in this case) that has already been destroyed.
+    // Therefore, it is necessary to allow the caller to refer to the callee.
+    process *source_reply_target;
+    process *destination_reply_target;
+    ```
+
+    // TODO: いい感じの図を作る
+]
+
+#technical_term(name: `reply`)[
+]
+
+==== Direct Context Switch
+
+Aは @ElphinstoneEtAl:2013 を
+==== Capability Call
+
+A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくまでもIPC Portに対するCapability Callとして提供される．
+
+#pagebreak()
 
 === Notification Port Capability
 
