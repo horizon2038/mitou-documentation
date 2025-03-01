@@ -878,7 +878,7 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
 この状態ではReceiverとなるContextが存在しないため，$"Context"_"A"$はBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
 さらに$"Context"_"B"$が$"IPCPort"_"A"$へSend操作を実行すると，やはりReceiverが存在しないためBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
 ここで，Receiverとなる$"Context"_"C"$が$"IPCPort"_"A"$へReceive操作を実行すると，$"IPCPort"_"A"$が持つWait Queueの先頭から$"Context"_"A"$が取り出され，$"Context"_"A"$の持っていたMessageが$"Context"_"C"$にCopyされる．
-このを例を図示すると (@ipc_port::send_receive_example) のようになる．
+この例を図示すると (@ipc_port::send_receive_example) のようになる．
 
 #figure([
     // utility
@@ -893,7 +893,6 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
         spacing: 4em,
         node-inset: 1em,
 
-
         // draw nodes
         sender([$"Context"_"A"$], (0, 0)),
         sender([$"Context"_"B"$], (0, 1)),
@@ -907,7 +906,7 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
         edge((0, 1), (0.75, 1), (0.75, 0.5), (2, 0.5), "-|>", label-side: center, label-pos: 85%),
         edge((0, 0), (0.75, 0), (0.75, 0.5), (2, 0.5), [`send`], "-|>", label-side: center, label-pos: 86%),
         edge((0, 0), (2, 0),(2, 0.5), box(inset: 0em)[Enqueue], "-|>", label-side: center, label-pos: 30%),
-        edge((0, 1), (2, 1),(2, 0.5), box(inset: 1em)[Enqueue], "-|>", label-side: center, label-pos: 31%, label-anchor: "north"),
+        edge((0, 1), (2, 1),(2, 0.5), box(inset: 0em)[Enqueue], "-|>", label-side: center, label-pos: 31%, label-anchor: "north"),
         edge((4, 0.5), (2, 0.5), [`receive`], "-|>", label-side: center),
         edge((4, 0.5), (3.45, 0.5), (3.45, 0), (2, 0), (2, 0.5), [Dequeue], "-|>", label-side: center, label-pos: 58%, label-anchor: "south"),
         edge((0, 0), (0, -0.5), (4, -0.5), (4, 0.5), [Send Message], "..|>", label-side: center),
@@ -929,7 +928,32 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 ==== Call/Reply Mechanism
 
 先述したSendやReceive操作は一方向の通信であり，双方向通信にはコストが発生するため基本的に推奨されない．
-そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Modelに特化した操作の仕様が推奨される．
+そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Model (@client_server_model) に特化した操作の仕様が推奨される．
+
+#figure([ 
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: 2em,
+        node-inset: 1em,
+
+        // draw nodes
+        node((0, 0), "Client"),
+        node((2, 0), "Server"),
+        node((1, 1), block(inset: (x: 4em))[Microkernel]),
+
+        edge((0, 0), (0, -1), (2, -1), (2, 0),  [Call], "..|>", label-side: center),
+        edge((2, 0), (0, 0), [Reply], "..|>", label-side: center),
+
+        edge((0, 0), (0, 1), (1, 1), [Message], "<|-|>"),
+        edge((1, 1), (2, 1), (2, 0), block(inset: (x: 1em))[Message], "<|-|>", label-anchor: "west"),
+    )
+    ],
+    caption: "Client-Server Model"
+) <client_server_model>
+
 これらは双方向通信を1つのPathで実行するための操作であり，これによってContext Switchのコストを抑え，なおかつ高度な最適化を実現する．
 
 #v(1em)
@@ -1107,27 +1131,30 @@ Capability Transferは必ずIPC Bufferを介して行われるため，Virtual M
 ==== Data Structure
 
 #technical_term(name: `message_info`)[
-    IPCの細かい挙動を制御するための構造である．
+    IPCの細かい挙動を制御するための構造である (cf., @ipc_port::message_info)．
     送信者はこの構造を設定し，受信者は受け取ることによって情報を取得できる．
 ]
 
-#bytefield(
-    bpr: 16,
-    rows: (8em),
-    bitheader(
-        "bounds",
-        0,
-        8,
-        15,
-        text-size: 8pt,
-    ),
+#figure(
+    bytefield(
+        bpr: 16,
+        rows: (8em),
+        bitheader(
+            "bounds",
+            0,
+            8,
+            15,
+            text-size: 8pt,
+        ),
 
-    flag[BLOCK],
-    bytes(1)[MESSAGE_LENGTH],
-    bits(6)[TRANSFER_COUNT],
-    flag[KERNEL],
-    text-size: 4pt,
-)
+        flag[BLOCK],
+        bytes(1)[MESSAGE_LENGTH],
+        bits(6)[TRANSFER_COUNT],
+        flag[KERNEL],
+        text-size: 4pt,
+    ),
+    caption: "Message Info"
+) <ipc_port::message_info>
 
 #normal_table(
     "BLOCK", "設定されている場合，IPC操作はBlockされる",
@@ -1147,7 +1174,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #api_table(
     "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-    "message_info", "info", "送信するMessageの情報",
+    "message_info", "info", [送信するMessageの情報 \ (cf., @ipc_port::message_info)],
 )
 
 #technical_term(name: `receive`)[IPC PortからMessageを受信する．]
@@ -1161,7 +1188,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #figure(
     api_table(
-        "message_info", "info", "受信したMessageの情報",
+        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
         "word", "identifer", "送信元のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1173,14 +1200,14 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-        "message_info", "info", "送信するMessageの情報",
+        "message_info", "info", [送信するMessageの情報 \ (cf., @ipc_port::message_info)],
     ),
     caption: [`call`の引数]
 )
 
 #figure(
     api_table(
-        "message_info", "info", "受信したMessageの情報",
+        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
         "word", "identifer", "送信元のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1191,7 +1218,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #api_table(
     "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
-    "message_info", "info", "送信 (Reply) するMessageの情報",
+    "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @ipc_port::message_info)]
 )
 
 #technical_term(name: `reply_receive`)[IPC Portに対してReply Receiveを実行する．]
@@ -1199,14 +1226,14 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor],
-        "message_info", "info", "送信 (Reply) するMessageの情報",
+        "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @ipc_port::message_info)],
     ),
     caption: [`reply_receive`の引数]
 )
 
 #figure(
     api_table(
-        "message_info", "info", "受信したMessageの情報",
+        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
         "word", "identifer", "送信元 (Caller) のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1223,6 +1250,71 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #pagebreak()
 
 === Notification Port Capability
+
+Notification PortはAsynchronous Notificationを実現するためのCapabilityである．
+Notification PortはIPC Portとは異なり，1WordのNotification Flag Fieldのみを持つ．
+
+=== Identifier
+
+IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を持つ．
+
+==== Capability Call
+
+#technical_term(name: `notify`)[
+    Notification Portに対してNotificationを送信する．Slot-LocalなIdentifierはNotification Flag FieldにBitwise ORされる．
+]
+
+#api_table(
+    "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor"
+)
+
+#technical_term(name: `wait`)[
+    Notification Portに対してNotificationが発生するまでBlockする．
+    Notificationが発生した場合IdentiferがBitwise ORされたNotification Flag Fieldが返され，その後Fieldは0にリセットされる．
+]
+
+#figure(
+    api_table(
+        "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor"
+    ),
+    caption: [`wait`の引数]
+)
+
+#figure(
+    api_table(
+        "message_info", "info", "受信したMessageの情報",
+        "word", "flag", "Notification PortのFlag Field",
+    ),
+    caption: [`wait`の戻り値]
+)
+
+
+#technical_term(name: `poll`)[
+    Notification PortのNotificationをNon-Blockingで取得する．
+    Identifierが設定されていない場合のNotificationも対象となる#footnote[Identiferが設定されていない場合，対象となるIdentifierは自動的に0として扱われる．この状態でBitwise ORをしてもFlag Fieldは変化しないが，Notificationが発生したという情報はそのまま伝達される．]．
+]
+
+#figure(
+    api_table(
+        "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor"
+    ),
+    caption: [`poll`の引数]
+)
+
+#figure(
+    api_table(
+        "message_info", "info", "受信したMessageの情報",
+        "word", "flag", "Notification PortのFlag Field",
+    ),
+    caption: [`poll`の戻り値]
+)
+
+#technical_term(name: `identify`)[Notification Portに対してSlot-LocalなIdentifierを設定する．]
+
+#api_table(
+    "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor",
+    "word", "identifier", "IPC Portに付与するIdentifier"
+)
 
 === Interrupt Region Capability
 
