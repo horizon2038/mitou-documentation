@@ -1,6 +1,7 @@
 #import "/components/api_table.typ" : *
 #import "@preview/bytefield:0.0.7": *
 #import "@preview/cetz:0.3.2"
+#import "@preview/fletcher:0.5.5" as fletcher: diagram, node, edge
 
 #import "/components/term.typ" : *
 
@@ -40,7 +41,7 @@ Kernel Callは細分化することができ，以下2 + 1個のAPIを提供す�
 // Capabilityの基礎概念を説明する
 A9N Microkernelの実装にはObject-Capability Model @DennisEtAl:1966 によるCapability-Based Securityを採用し，従来のシステムが抱えていた課題を解消した．
 Capabilityは特権的リソース : Objectに対するアクセス権限を示すUniqueなTokenである．
-従来のACLを用いたアクセス $dash.em.two$ リソース自身がPermissionを確認する方式とは異なり，該当Capabilityの所有者のみが操作を実行可能である．
+従来のACLを用いたアクセス ── リソース自身がPermissionを確認する方式とは異なり，該当Capabilityの所有者のみが操作を実行可能である．
 このように，PoLPを満たしつつも柔軟なアクセス制御を実現する．
 
 言い換えるとCapabilityはTokenであり，間接的にObjectへアクセスするためのHandleである．
@@ -182,9 +183,10 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 === Scheduler
 
 A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．
-Benno Schedulerは従来のSchedulerとは異なり，必ず実行可能なProcessのみをQueueに保持する．
-このアプローチはQueue操作を簡易化し，なおかつHot-Cache内で実行されやすくなり高速化される．
-その結果としてSystem全体の応答速度は向上する．
+Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持つ．
+基本的には従来のSchedulerと同じだが，Benno Schedulerが異なる点は必ず実行可能なProcessのみをQueueに保持するところにある．
+このアプローチはQueue操作を簡易化し，なおかつHot-Cache内の実行による高速化を実現することができる．
+その結果，SystemはLow Latencyとなる．
 
 === Kernel-Level Stack
 
@@ -879,11 +881,9 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
 このを例を図示すると (@ipc_port::send_receive_example) のようになる．
 
 #figure([
-    #import "@preview/fletcher:0.5.5" as fletcher: diagram, node, edge
-
     // utility
-    #let sender(name, pos) = (node((pos), name))
-    #let receiver(name, pos) = (node((pos), name))
+    #let sender(name, pos) = (node((pos), name, fill: none))
+    #let receiver(name, pos) = (node((pos), name, fill: none))
 
     #diagram(
         // initialize
@@ -897,17 +897,20 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
         // draw nodes
         sender([$"Context"_"A"$], (0, 0)),
         sender([$"Context"_"B"$], (0, 1)),
+        node(enclose: ((0, 0), (0, 1)), inset: 10pt, snap: false, fill: none, stroke: 0.05em),
+
         node((2, 0.5), "IPC Port"),
+
         receiver([$"Context"_"C"$], (4, 0.5)),
+
         // dirty hack
         edge((0, 1), (0.75, 1), (0.75, 0.5), (2, 0.5), "-|>", label-side: center, label-pos: 85%),
-        edge((0, 0), (0.75, 0), (0.75, 0.5), (2, 0.5), [`send`], "-|>", label-side: center, label-pos: 85%),
-        // edge((0, 1), (2, 0.5), [`send`], "-|>"),
-        edge((0, 0), (2, 0),(2, 0.5), box(inset: 0em)[Enqueue], "-|>", label-pos: 20%),
-        edge((0, 1), (2, 1),(2, 0.5), box(inset: 1em)[Enqueue], "-|>", label-pos: 20%, label-anchor: "north"),
-        edge((4, 0.5), (2, 0.5), [`receive`], "-|>"),
-        edge((4, 0.5), (3.45, 0.5), (3.45, 0), (2, 0), (2, 0.5), [Dequeue], "-|>", label-pos: 58%, label-anchor: "south"),
-        edge((0, 0), (0, -0.5), (4, -0.5), (4, 0.5), [Send Message], "..|>"),
+        edge((0, 0), (0.75, 0), (0.75, 0.5), (2, 0.5), [`send`], "-|>", label-side: center, label-pos: 86%),
+        edge((0, 0), (2, 0),(2, 0.5), box(inset: 0em)[Enqueue], "-|>", label-side: center, label-pos: 30%),
+        edge((0, 1), (2, 1),(2, 0.5), box(inset: 1em)[Enqueue], "-|>", label-side: center, label-pos: 31%, label-anchor: "north"),
+        edge((4, 0.5), (2, 0.5), [`receive`], "-|>", label-side: center),
+        edge((4, 0.5), (3.45, 0.5), (3.45, 0), (2, 0), (2, 0.5), [Dequeue], "-|>", label-side: center, label-pos: 58%, label-anchor: "south"),
+        edge((0, 0), (0, -0.5), (4, -0.5), (4, 0.5), [Send Message], "..|>", label-side: center),
     )
     ],
     caption: "IPC Send/Receive Example"
@@ -925,8 +928,9 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 
 ==== Call/Reply Mechanism
 
-先述したSendやReceive操作は一方向の通信であり，基本的に使用は推奨されない．
+先述したSendやReceive操作は一方向の通信であり，双方向通信にはコストが発生するため基本的に推奨されない．
 そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Modelに特化した操作の仕様が推奨される．
+これらは双方向通信を1つのPathで実行するための操作であり，これによってContext Switchのコストを抑え，なおかつ高度な最適化を実現する．
 
 #v(1em)
 #technical_term(name: `call`)[
@@ -937,41 +941,145 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     この操作を実現するため，Call時にそのCallerはReceiverへReply Objectを設定する．
     このReply ObjectはReply StateとReply Target部によって構成される．
 
-    Reply StateはReply Objectの状態を示し，SourceとDestinationの2つが存在する．
-    Callを実行し，Replyを待っている場合にWAITが設定される．
+    Reply StateはReply Objectの状態を示し，SourceとDestinationの2つ存在する．
+    また，それぞれに付随するContextを保持するためのPointerがReply Targetへ格納される．
+
+    - Callを実行し，Replyを待っている場合Source Reply ObjectにWAITが設定される．また，送信先のContextをSource Reply Targetに設定する．
+    - Receiveを実行し，Reply先のContextが決定された場合Destination Reply ObjectにREADY_TO_REPLYが設定される．また，送信元のContextをDestination Reply Targetに設定する．
+
+    Source Reply Targetは一見不要に思えるが，これは無効な参照の発生を避けるために使用される．
+    仮にCallを実行した先のReceiverが途中で破棄された場合，Destination Reply Targetが無効なContextを指すことになる．したがって，Destination Reply Objectが設定されているようなContextを破棄する場合はSource Reply Targetを参照しCallを中止する必要がある．
     
+    これらの構造を統合したものを(@ipc_port::call_reply_mechanism)に示す．
 
-    ```cpp
-    enum class source_reply_state_object : a9n::word
-    {
-        NONE,
-        WAIT,
-    } source_reply_state { source_reply_state_object::NONE };
+    #figure([
+        // utility
+        #let call_context(name, pos) = (node((pos), name, fill: none))
+        #let receive_and_reply_context(name, pos) = (node((pos), name, fill: none))
 
-    enum class destination_reply_state_object : a9n::word
-    {
-        NONE,
-        READY_TO_REPLY,
-    } destination_reply_state { destination_reply_state_object::NONE };
+        #diagram(
+            // initialize
+            node-stroke: 0.1em,
+            node-fill: luma(240),
+            // node-corner-radius: 0.25em,
+            spacing: 4em,
+            node-inset: 1em,
 
-    // NOTE: *Why do we need source_reply_target?*
-    // Suppose that process A is in the middle of a call to process B and A is destroyed (e.g.,
-    // via Revoke/Remove). Although process B has A as the reply target, it will hold a pointer
-    // to an invalid process (A in this case) that has already been destroyed.
-    // Therefore, it is necessary to allow the caller to refer to the callee.
-    process *source_reply_target;
-    process *destination_reply_target;
-    ```
+            call_context($"Context"_"A"$, (0, 0)),
+            node((0, 0.5), "Reply (Source)"),
 
-    // TODO: いい感じの図を作る
+            receive_and_reply_context($"Context"_"B"$, (4, 0)),
+            node((4, -0.5), "Reply (Destination)"),
+
+            node((2, 0), "IPC Port"),
+
+            edge((0, 0), (2, 0), `call`, "-|>", label-side: center, ),
+            edge((4, 0), (2, 0), `receive + reply`, "-|>", label-side: center, ),
+
+            edge((0, 0), (0, -1), (4, -1), (4, -0.5), [Configure], "..|>", label-side: center, ),
+            edge((4, 0), (4, 1), (0, 1), (0, 0.5), [Configure], "..|>", label-side: center, ),
+
+            edge((4, -0.5), (0, -0.5), (0, 0), [Copy Message], "-|>", label-side: center, label-pos: 21.5%),
+            edge((0, 0.5), (4, 0.5), (4, 0), [Copy Message], "-|>", label-side: center, label-pos: 20.5%),
+        )],
+        caption: "Call/Reply Mechanism"
+    ) <ipc_port::call_reply_mechanism>
 ]
 
 #technical_term(name: `reply`)[
+    Callに対してReceiveを実行した場合，先述した通りDestination Reply ObjectにREADY_TO_REPLYとCaller Contextが設定される．
+    ReplyはこのDestination Reply Objectを参照してMessageを送信する．言い換えると，設定されていない場合はすぐさまReturnする．
+    これも先述した通り，Receive先のContextとReply先のContextは同一であることが保証される．
+
+    Reply Objectの存在によりIPC Portを介さない，直接的なMessageの送信が可能となる．Capability Callの仕様上IPC PortへのDescriptorを指定する必要はあるが，このIPC Portは文字通りどのIPC Portを指すものでも良い．
+]
+
+#technical_term(name: `reply_receive`)[
+    Reply ReceiveはReplyとReceiveを1つのPathで実行し，高速にServerを実装するための操作である．
+
+    典型的に，MicrokernelにおけるServerは以下のようなEvent-Driven Architectureをとる：
+    + Receiveを実行し，Reply先のContextを決定する．
+    + 受信したMessageを解析し，どのような処理を行うか決定する．
+    + Replyを実行し，解析結果ごとの処理結果をClientに返す．
+    + 1に戻る．
+
+    疑似コードを図示すると (@ipc_port::microkernel_client_server_pseudo_code) のようになる．
+
+    #figure(
+        ```c
+        void main()
+        {
+            message received_message;
+            message reply_message;
+
+            while (true)
+            { 
+                received_message = receive();
+
+                switch(received_message.tag)
+                {
+                    // TAG-Specificな処理を行う
+                    case TAG_A:
+                        reply_message = process_tag_a(received_message);
+                        break;
+                    case TAG_B:
+                        reply_message = process_tag_b(received_message);
+                        break;
+                    default:
+                        return;
+                }
+
+                reply(reply_message);
+            }
+        }
+        ```,
+        caption: "Microkernelにおける典型的なServerのPseudo Code"
+    ) <ipc_port::microkernel_client_server_pseudo_code>
+
+    このうち，ReceiveとReplyは結合し，Context SwitchやCache Missのコストを削減できる．
+    ただし，上記のPseudo Codeの順序をそのままに実装することはできない．A9N MicrokernelではVirtual Message RegisterをIPCの送受信ともに共通で使用するためである．
+    そのため，Receive Replyのような操作として実装してしまうとReplyするためのMessageがReceiveによって上書きされてしまう．
+    したがって，二者の順序を入れ替え，Replyを先に実行することでこの問題を回避する．
+    すると，(@ipc_port::reply_receive_pseudo_code) で示すようなStartupを目的とするReceiveが必要である．
+
+    #figure(
+        ```c
+        void main()
+        {
+            // あらかじめReceiveを実行しておく
+            message received_message = receive();
+            message reply_message;
+
+            while (true)
+            { 
+                switch(received_message.tag)
+                {
+                    // TAG-Specificな処理を行う
+                    case TAG_A:
+                        reply_message = process_tag_a(received_message);
+                        break;
+                    case TAG_B:
+                        reply_message = process_tag_b(received_message);
+                        break;
+                    default:
+                        return;
+                }
+
+                // Loop終盤でReply Receiveを実行する
+                reply_receive(reply_message);
+            }
+        }
+        ```,
+        caption: "Reply ReceiveのPseudo Code"
+    ) <ipc_port::reply_receive_pseudo_code>
 ]
 
 ==== Direct Context Switch
 
-Aは @ElphinstoneEtAl:2013 を
+// A9N MicrokernelとIPC Port，そしてSchedulerはDirect Context Switch @ElphinstoneEtAl:2013 のための機構を備える．
+MicrokernelにおいてIPCは極めてCriticalな操作であり，可能な限りLow Latencyで実行する必要がある．
+そのため，Direct Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限りSenderからReceiverへ，またその逆を直接Context Switchする．
+
 ==== Capability Call
 
 A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくまでもIPC Portに対するCapability Callとして提供される．
