@@ -1319,27 +1319,200 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
 
 === Interrupt Region Capability
 
-Interrupt Regionは割り込みを
+Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する (cf., @interrupt_region::make_port::example) ためのCapabilityである．
+このCapabilityはGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．
+Genericを介さないためMemory Regionを消費することはない．
+
+#figure(block(inset: 1em)[
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: 4em,
+        node-inset: 1em,
+
+        // draw nodes
+        node((0, 0), [$"InterruptRegion"_"Root"$], name: <interrupt_region>),
+        node((2, 0), [$"InterruptPort"_"0"$], name: <interrupt_port::0>),
+        node((2, 0.5), [$"InterruptPort"_"1"$], name: <interrupt_port::1>),
+        node((2, 1), [$"InterruptPort"_"2"$], name: <interrupt_port::2>),
+        node((2, 1.5), [$"InterruptPort"_"n"$], name: <interrupt_port::n>),
+
+        edge(<interrupt_region>, (1, 0), (1, 0.5), <interrupt_port::1>, "-|>", label-side: center),
+        edge(<interrupt_region>, (1, 0), (1, 1), <interrupt_port::2>, "-|>", label-side: center),
+        edge(<interrupt_region>, (1, 0), (1, 1.5), <interrupt_port::n>, "-|>", label-side: center),
+
+        // overwrite
+        edge(<interrupt_region>, <interrupt_port::0>, `make_port`, "-|>", label-side: center),
+    ),
+    ],
+    caption: "Interrupt RegionからInterrupt Portを生成する例"
+) <interrupt_region::make_port::example>
+
+==== Capability Call
+
+#technical_term(name: `make_port`)[
+    Interrupt RegionからInterrupt Portを生成する．
+    この操作によって生成されるInterrupt PortはIRQ Numberごとに一意である．
+]
+
+#api_table(
+    "descriptor", "interrupt_region_descriptor", "対象Interrupt RegionへのDescriptor",
+    "word", "irq_number", "作成するInterrupt PortのIRQ Number",
+    "capability_descriptor", "node_descriptor", "Interrupt Portを格納するNodeへのDescriptor",
+    "word", "index", "Interrupt Portを格納するNodeのIndex (Offset)",
+)
 
 #pagebreak()
 
 === Interrupt Port Capability
 
+Interrupt PortはInterrupt Regionから生成されるCapabilityである．
+特定のIRQ Numberと1:1で対応しており，割り込み発生時に指定したNotification PortへNotificationを送信する (cf., @interrupt_port::interrupt::example)．
+
+#figure(block(inset: 1em)[
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (6em, 2em),
+        node-inset: 1em,
+
+        // draw nodes
+        node((0, 0), [Interrupt], name: <interrupt>, shape: circle, extrude: (-3, 0), inset: 1.5em, fill: luma(240)),
+        node((1, 0), [$"InterruptPort"_"n"$], name: <interrupt_port::0>),
+        node((2, 0), [$"NotificationPort"_"A"$], name: <notification_port::a>),
+
+        edge(<interrupt>, <interrupt_port::0>, "-|>", "wave", label-side: center),
+        edge(<interrupt_port::0>, <notification_port::a>, "-|>", [`notify`], label-side: center),
+        edge(<notification_port::a>, (2, -1), (1, -1), <interrupt_port::0>, "-|>", [`bind`], label-side: center),
+        edge(<interrupt_port::0>, (1, 1), (2, 1), <notification_port::a>, "<>-|>", [`has-a`], label-side: center),
+    )
+    ],
+    caption: "Interrupt PortからNotification PortへのNotificationを送信する例"
+) <interrupt_port::interrupt::example>
+
+==== Capability Call
+
+#technical_term(name: `bind`)[
+    Interrupt PortにNotification PortをBindする．
+    割り込み発生時，このNotification PortへNotificationが送信される．
+]
+
+#api_table(
+    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+    "capability_descriptor", "notification_port", "BindするNotification PortへのDescriptor",
+)
+
+#technical_term(name: `unbind`)[
+    Interrupt PortにBindされているNotification PortをUnbindする．
+]
+
+#api_table(
+    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+)
+
+#technical_term(name: `ack`)[
+    Interrupt Portに対して割り込みをAckする．この操作によって割り込みを再度有効化する．
+]
+
+#api_table(
+    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+)
+
+#technical_term(name: `get_irq_number`)[
+    Interrupt Portが対応するIRQ Numberを取得する．
+]
+
+#figure(
+    api_table(
+        "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+    ),
+    caption: [`get_irq_number`の引数]
+)
+
+#figure(
+    api_table(
+        "word", "irq_number", "Interrupt Portが対応するIRQ Number",
+    ),
+    caption: [`get_irq_number`の戻り値]
+)
+
 #pagebreak()
 
 === IO Port Capability
+
+IO PortはPort-Mapped IO (i.e., PMIO) を抽象化するCapabilityである．
+PMIOの存在はArchitectureに依存する．したがって，PMIOが存在しないArchitectureにおいて読み書き操作は無視される．
+IO PortもInterrupt Portと同様にGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．
+また，Genericを介さないためMemory Regionを消費しない．
+
+==== Region
+
+IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ読み書き操作が可能である．
+また，IO Portは自身のSubsetであるIO PortをMint操作によって生成することができる (cf., @io_port::mint::example)．これにより，特定のAddressに対してのみ読み書き操作を許可することができ，特権の最小化を実現する．
+
+#figure([
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: 2em,
+        node-inset: 1em,
+
+        /*
+        node((0, 0.5), "Reply (Source)"),
+
+        node((4, -0.5), "Reply (Destination)"),
+
+        node((2, 0), "IPC Port"),
+
+        edge((0, 0), (2, 0), `call`, "-|>", label-side: center, ),
+        edge((4, 0), (2, 0), `receive + reply`, "-|>", label-side: center, ),
+
+        edge((0, 0), (0, -1), (4, -1), (4, -0.5), [Configure], "..|>", label-side: center, ),
+        edge((4, 0), (4, 1), (0, 1), (0, 0.5), [Configure], "..|>", label-side: center, ),
+
+        edge((4, -0.5), (0, -0.5), (0, 0), [Copy Message], "-|>", label-side: center, label-pos: 21.5%),
+        edge((0, 0.5), (4, 0.5), (4, 0), [Copy Message], "-|>", label-side: center, label-pos: 20.5%),
+        */
+
+        node((0, 0), [$"IOPort"_"A"$ \[0x0000 - 0xFFFF)], name: <ioport_a>),
+        node((-0.75, 1), [$"IOPort"_"B"$ \[0x0000 - 0x9000)], name: <ioport_b>),
+        node((0.75, 1), [$"IOPort"_"C"$ \[0x9000 - 0xFFFF)], name: <ioport_c>),
+        node((-1.5, 2), [$"IOPort"_"D"$ \[0x0000 - 0x6000)], name: <ioport_d>),
+        node((-0.25, 2), [$"IOPort"_"E"$ \[0x3000 - 0x4000)], name: <ioport_e>),
+
+        edge(<ioport_a>, <ioport_b>, [Mint], "-|>", label-side: center, label-pos: 40%, label-anchor: "north"),
+        edge(<ioport_a>, <ioport_c>, [Mint], "-|>", label-side: center, label-pos: 40%, label-anchor: "north"),
+        edge(<ioport_b>, <ioport_d>, [Mint], "-|>", label-side: center, label-pos: 40%, label-anchor: "north"),
+        edge(<ioport_b>, <ioport_e>, [Mint], "-|>", label-side: center, label-pos: 40%, label-anchor: "north"),
+    )],
+    caption: "MintによるIO PortのSubset生成例"
+) <io_port::mint::example>
+
+==== Capability Call
 
 #pagebreak()
 
 === Virtual CPU Capability
 
+TODO
+
 #pagebreak()
 
 === Virtual Address Space Capability
 
+TODO
+
 #pagebreak()
 
 === Virtual Page Table Capability
+
+TODO
 
 #pagebreak()
 
