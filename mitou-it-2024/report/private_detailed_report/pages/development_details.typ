@@ -238,15 +238,38 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 #api_table(
     "message_register[0]", "is_success", "操作の成否",
-    "message_register[1]", "error", [Capability CallのError#footnote()[現在は簡易化のためにCapability Error型のみを返しているが，将来的にこのFieldもCapability-Definedな値の返却に使用する予定である．]],
+    "message_register[1]", "error", [Capability CallのError#footnote()[現在は簡易化のためにCapability Error型 (cf., @a9n::capability_result) のみを返しているが，将来的にこのFieldもCapability-Definedな値の返却に使用する予定である．]],
 )
 
-このようにMessage RegisterのIndex : 0とIndex : 1は予約されているが，統合されCapability Result型として使用される．
+このようにMessage RegisterのIndex : 0とIndex : 1は予約されているが，統合されCapability Result型 (cf., @a9n::capability_result::definition) として使用される．
 それ以外のMessage RegisterはそれぞれのCapabilityが定義したように使用できる．
 
 したがって，各Capability Callの略式表記は以下のようになる：
 - 返り値がCapability Result型のみの場合，返り値の表記は省略する．返り値が存在する場合はそれを記述するが，Capability Resultは省略する．
 - `operation`はそれぞれのCapability Callによって異なるため，その指定をLibrary Functionに内包させる．そのため，表記からは省略する．
+
+=== Capability Result <a9n::capability_result>
+
+Capability Resultは`liba9n::result`を用いて定義されるCapability Callの返り値であり，以下のように (cf., @a9n::capability_result::definition) 定義される．
+これらは`a9n::kernel` Namespaceに内包される．
+
+#figure(
+    ```cpp
+    enum class capability_error : a9n::word
+    {
+        ILLEGAL_OPERATION,
+        PERMISSION_DENIED,
+        INVALID_DESCRIPTOR,
+        INVALID_DEPTH,
+        INVALID_ARGUMENT,
+        FATAL,
+        DEBUG_UNIMPLEMENTED,
+    };
+
+    using capability_result = liba9n::result<void, capability_error>;
+    ```,
+    caption: "Capability Resultの定義"
+) <a9n::capability_result::definition>
 
 #pagebreak()
 
@@ -1827,6 +1850,66 @@ Root Nodeに対する操作を直接実行することはできないが，こ�
 #v(1em)
 
 Init Infoの内容を書き込むAddressは簡単な計算で求めることができる．A9N Microkernelは0を基準としたVirtual Addressの使用をInit Serverに要求するため，(@a9n::boot_protocol::init_image_info)のFieldである$"LoadedAddress" + "InitInfoAddress"#footnote[Virtual Addressは単なるOffsetとなる．]$がInit InfoのPhysical Addressとなる．
+
+=== Build System <a9n::build_system>
+
+以前のA9N MicrokernelはMakefileによってBootloaderやInit Serverと統合してBuildされていたが，正しくが分割されておらず本質的にArchitecture-Dependentであった．
+これを解決するため，現在は構造化されたCMakeによってBuildされるように変更された．具体的な構成を以下に示す (cf., @a9n::build_system::cmake)：
+
+#figure(
+    diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (1em, 1em),
+        node-inset: 1em,
+
+        // cmake
+        // architecture-independent
+        node((0, 0),  [Builder], name: <builder>),
+        node((0, 2),  [`CMakeLists.txt`], name: <cmakelists>),
+        node((0, 4),  [`src/CMakeLists.txt`], name: <cmakelists::src>),
+        node((-1, 6), [`src/kernel/CMakeLists.txt`], name: <cmakelists::src::kernel>),
+        node((0, 6),  [`src/hal/CMakeLists.txt`], name: <cmakelists::src::hal>),
+        node((1, 6),  [`src/liba9n/CMakeLists.txt`], name: <cmakelists::src::liba9n>),
+        node(
+            enclose: (
+                <cmakelists>,
+                <cmakelists::src>,
+                <cmakelists::src::kernel>,
+                <cmakelists::src::hal>,
+                <cmakelists::src::liba9n>
+            ),
+            name: <cmakelists::architecture-independent>
+        ),
+
+        // architecture-dependent 
+        node((0, 10), [`src/hal/{arch}/CMakeLists.txt`], name: <cmakelists::src::hal::arch>),
+        node((1, 10),  [`src/hal/{arch}/toolchain.cmake`], name: <cmakelists::src::hal::arch::toolchain>),
+        node(
+            enclose: (
+                <cmakelists::src::hal::arch>,
+                <cmakelists::src::hal::arch::toolchain>
+            ),
+            fill: luma(240),
+            name: <cmakelists::src::hal::arch::architecture-dependent>
+        ),
+
+        edge(<builder>, <cmakelists::architecture-independent>, "-|>", label-side: center),
+        edge(<cmakelists>, <cmakelists::src>, "-|>", label-side: center),
+        edge(<cmakelists::src>, <cmakelists::src::kernel>, "-|>", label-side: center),
+        edge(<cmakelists::src>, <cmakelists::src::hal>, "-|>", label-side: center),
+        edge(<cmakelists::src>, <cmakelists::src::liba9n>, "-|>", label-side: center),
+        edge(<cmakelists::src::hal>, <cmakelists::src::hal::arch>, "-|>", label-side: center),
+
+        // toolchain
+    ),
+    caption: "CMakeListsの構造"
+) <a9n::build_system::cmake>
+
+Source CodeにおけるArchitecture-Dependentな部分のBuildは`src/hal/{arch}/CMakelists.txt`へ分離され，Toolchain-SpecificなToolchain Fileもまた`src/hal/{arch}/toolchain.cmake`へ分離された．
+これにより，構成する`CMakeLists.txt`の大半がArchitecture-Independentとなり，Portingが容易になった．
 
 #pagebreak()
 
