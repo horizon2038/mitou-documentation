@@ -1288,7 +1288,6 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
     caption: [`wait`の戻り値]
 )
 
-
 #technical_term(name: `poll`)[
     Notification PortのNotificationをNon-Blockingで取得する．
     Identifierが設定されていない場合のNotificationも対象となる#footnote[Identiferが設定されていない場合，対象となるIdentifierは自動的に0として扱われる．この状態でBitwise ORをしてもFlag Fieldは変化しないが，Notificationが発生したという情報はそのまま伝達される．]．
@@ -1316,23 +1315,45 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
     "word", "identifier", "IPC Portに付与するIdentifier"
 )
 
+#pagebreak()
+
 === Interrupt Region Capability
+
+Interrupt Regionは割り込みを
+
+#pagebreak()
 
 === Interrupt Port Capability
 
+#pagebreak()
+
 === IO Port Capability
+
+#pagebreak()
 
 === Virtual CPU Capability
 
+#pagebreak()
+
 === Virtual Address Space Capability
+
+#pagebreak()
 
 === Virtual Page Table Capability
 
+#pagebreak()
+
 === ABI
+
+#pagebreak()
 
 === Boot Protocol
 
+#pagebreak()
+
 === Init Protocol
+
+#pagebreak()
 
 == Nun Operating System Frameworkの開発
 
@@ -1346,6 +1367,8 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
 
 /* ===== KOITO ===== */
 
+#pagebreak()
+
 == KOITOの開発
 
 === Standard C Library
@@ -1355,6 +1378,8 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
 === Memory Management Server
 
 === POSIX Server
+
+#pagebreak()
 
 /* ===== liba9n ===== */
 
@@ -1371,6 +1396,8 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
 === Conditionally Trivial Special Member Functions
 
 === `liba9n::not_null<T>`
+
+#pagebreak()
 
 /* ===== A9NLoader ===== */
 

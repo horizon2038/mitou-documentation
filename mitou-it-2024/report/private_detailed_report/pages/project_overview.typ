@@ -2,7 +2,14 @@
 
 == A9N Microkernel
 
-A9N Microkernelは既存Systemの課題を解決するために設計された, HALによる移植容易性を持つMicrokernelである．
+#figure(
+    image("/resources/A9N_logo.png", width: 35%),
+    caption: [
+        A9N Microkernelのロゴ
+    ]
+) <a9n_logo>
+
+A9N Microkernel (@a9n_logo) は既存Systemの課題を解決するために設計された, HALによる移植容易性を持つMicrokernelである．
 Object-Capability ModelによるCapability-Based Securityを採用し，抽象Memory CapabilityによるSecureなUser-Level Memory Managementを可能とする．
 また，高速なIPC機構によるLow-Latencyな通信を実現する．
 
@@ -14,7 +21,15 @@ Rustを用いることでType SafetyやMemory Safetyを保証し，またCargo�
 
 == KOITO
 
-KOITOはNunによって実装される，A9N Microkernel上で動作するOSである．
+#figure(
+    image("/resources/KOITO_logo.png", width: 40%),
+    caption: [
+        KOITOのロゴ
+    ],
+    gap: 2em
+) <koito_logo>
+
+KOITO (@koito_logo) はNunによって実装される，A9N Microkernel上で動作するOSである．
 A9Nによって提供されるMechanismを用い，それに対応するPolicyを実装するLayerといえる．
 実態としては複数のServerで実現される抽象概念であり，Initial Server, POSIX Compatible Server, User-Level Memory Management Serverによって構成される．
 
