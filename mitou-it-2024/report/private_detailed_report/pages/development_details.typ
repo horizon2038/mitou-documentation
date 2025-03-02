@@ -557,25 +557,25 @@ GenericのConvert操作時，次のステップでCapabilityを生成する：
 #v(1em)
 
 まず，引数として与えられたCapability TypeとSpecific BitsからSize Radixを取得する．
-Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とする対数をとる (@calculate_radix_ceil)．
+Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とする対数をとる (@a9n::generic::calculate_radix_ceil)．
 
 #figure(
     $ "SizeRadix" = ceil.l log_2("Sizeof"("Object")) ceil.r $,
     caption: "Size Radixの計算"
-) <calculate_radix_ceil>
+) <a9n::generic::calculate_radix_ceil>
 
 Specific Bitsが必要となる理由は，Specific Bitsによって全体としてのSizeが決定されるCapability NodeのようなCapabilityが存在するためである．
 
-次に，Size Radix分のMemory領域がAllocate可能か確認する．Allocateした場合のWatermarkを計算し (@calculate_new_watermark) ，
+次に，Size Radix分のMemory領域がAllocate可能か確認する．Allocateした場合のWatermarkを計算し (@a9n::generic::calculate_new_watermark) ，
 
 #figure(
     $
         "NewWatermark" = "SizeRadix" dot stretch(ceil.l, size: #150%) frac("Watermark", "SizeRadix") stretch(ceil.r, size: #150%)
     $,
     caption: "Size RadixにAlignされたWatermarkを計算"
-) <calculate_new_watermark>
+) <a9n::generic::calculate_new_watermark>
 
-それが範囲内か確認する (@check_new_boundary)．
+それが範囲内か確認する (@a9n::generic::check_new_boundary)．
 
 #figure(
     $
@@ -583,7 +583,7 @@ Specific Bitsが必要となる理由は，Specific Bitsによって全体とし
         "NewWatermark" + 2^"SizeRadix" * "Count" <= "BaseAddress" + 2^"RadixBits"
     $,
     caption: "Allocationのための境界チェック"
-) <check_new_boundary>
+) <a9n::generic::check_new_boundary>
 
 そして，最後にAllocateを実行する．
 
@@ -604,13 +604,13 @@ Genericの再利用には，ConvertされたすべてのCapabilityをRemoveす�
 #api_table(
     "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
     "capability_type", "type", "生成するCapabilityのType",
-    "word", "specific_bits", [Capability生成時に使用する固有Bits \ cf., @generic::specific_bits],
+    "word", "specific_bits", [Capability生成時に使用する固有Bits \ cf., @a9n::generic::specific_bits],
     "word", "count", "生成するCapabilityの個数",
     "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
     "word", "node_index", "格納先NodeのIndex",
 )
 
-Specific BitsはCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
+Specific Bits (@a9n::generic::specific_bits) はCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
 
 #figure(
     normal_table(
@@ -629,7 +629,7 @@ Specific BitsはCapability Type依存の初期化に使用する値である．�
         "Virtual Page Table", "-",
     ),
     caption: "generic::specific_bits",
-) <generic::specific_bits>
+) <a9n::generic::specific_bits>
 
 #pagebreak()
 
@@ -773,7 +773,7 @@ Benno Schedulerは前述の通り実行可能なContextのみをQueueとして�
 
 #api_table(
     "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
-    "configuration_info", "info", [cf., @process_control_block::configuration_info],
+    "configuration_info", "info", [cf., @a9n::process_control_block::configuration_info],
     "capability_descriptor", "root_page_table", "Root Page TableへのDescriptor",
     "capability_descriptor", "root_node", "Root NodeへのDescriptor",
     "capability_descriptor", "frame_ipc_buffer", "IPC BufferとしたいFrameへのDescriptor",
@@ -786,7 +786,7 @@ Benno Schedulerは前述の通り実行可能なContextのみをQueueとして�
     "word", "affinity", "SMP環境におけるAffinity (CPU CoreのIndex)",
 )
 
-Performanceのため，Process Control Blockにおける各ParameterはConfiguration Info (@process_control_block::configuration_info)によって一括してConfigurationできる．
+Performanceのため，Process Control Blockにおける各ParameterはConfiguration Info (@a9n::process_control_block::configuration_info)によって一括してConfigurationできる．
 
 #figure(
     bytefield(
@@ -815,7 +815,7 @@ Performanceのため，Process Control Blockにおける各ParameterはConfigura
         text-size: 4pt,
     ),
     caption: "Configuration Info"
-) <process_control_block::configuration_info>
+) <a9n::process_control_block::configuration_info>
 
 Configuration Infoの各BitがそれぞれのFieldに対応する．
 このBitが立っている場合，そのFieldがConfigurationされる．逆に言えば，立っていない場合そのFieldに対応する引数は無視される．
@@ -878,7 +878,7 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
 この状態ではReceiverとなるContextが存在しないため，$"Context"_"A"$はBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
 さらに$"Context"_"B"$が$"IPCPort"_"A"$へSend操作を実行すると，やはりReceiverが存在しないためBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
 ここで，Receiverとなる$"Context"_"C"$が$"IPCPort"_"A"$へReceive操作を実行すると，$"IPCPort"_"A"$が持つWait Queueの先頭から$"Context"_"A"$が取り出され，$"Context"_"A"$の持っていたMessageが$"Context"_"C"$にCopyされる．
-この例を図示すると (@ipc_port::send_receive_example) のようになる．
+この例を図示すると (@a9n::ipc_port::send_receive_example) のようになる．
 
 #figure([
     // utility
@@ -913,7 +913,7 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
     )
     ],
     caption: "IPC Send/Receive Example"
-) <ipc_port::send_receive_example>
+) <a9n::ipc_port::send_receive_example>
 
 この例はSender:Receiverがn:1の場合を示すが，Sender:Receiverが1:nの場合も同様である．
 
@@ -974,7 +974,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     Source Reply Targetは一見不要に思えるが，これは無効な参照の発生を避けるために使用される．
     仮にCallを実行した先のReceiverが途中で破棄された場合，Destination Reply Targetが無効なContextを指すことになる．したがって，Destination Reply Objectが設定されているようなContextを破棄する場合はSource Reply Targetを参照しCallを中止する必要がある．
     
-    これらの構造を統合したものを(@ipc_port::call_reply_mechanism)に示す．
+    これらの構造を統合したものを(@a9n::ipc_port::call_reply_mechanism)に示す．
 
     #figure([
         // utility
@@ -1007,7 +1007,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
             edge((0, 0.5), (4, 0.5), (4, 0), [Copy Message], "-|>", label-side: center, label-pos: 20.5%),
         )],
         caption: "Call/Reply Mechanism"
-    ) <ipc_port::call_reply_mechanism>
+    ) <a9n::ipc_port::call_reply_mechanism>
 ]
 
 #technical_term(name: `reply`)[
@@ -1027,7 +1027,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     + Replyを実行し，解析結果ごとの処理結果をClientに返す．
     + 1に戻る．
 
-    疑似コードを図示すると (@ipc_port::microkernel_client_server_pseudo_code) のようになる．
+    疑似コードを図示すると (@a9n::ipc_port::microkernel_client_server_pseudo_code) のようになる．
 
     #figure(
         ```c
@@ -1058,13 +1058,13 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
         }
         ```,
         caption: "Microkernelにおける典型的なServerのPseudo Code"
-    ) <ipc_port::microkernel_client_server_pseudo_code>
+    ) <a9n::ipc_port::microkernel_client_server_pseudo_code>
 
     このうち，ReceiveとReplyは結合し，Context SwitchやCache Missのコストを削減できる．
     ただし，上記のPseudo Codeの順序をそのままに実装することはできない．A9N MicrokernelではVirtual Message RegisterをIPCの送受信ともに共通で使用するためである．
     そのため，Receive Replyのような操作として実装してしまうとReplyするためのMessageがReceiveによって上書きされてしまう．
     したがって，二者の順序を入れ替え，Replyを先に実行することでこの問題を回避する．
-    すると，(@ipc_port::reply_receive_pseudo_code) で示すようなStartupを目的とするReceiveが必要である．
+    すると，(@a9n::ipc_port::reply_receive_pseudo_code) で示すようなStartupを目的とするReceiveが必要である．
 
     #figure(
         ```c
@@ -1095,7 +1095,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
         }
         ```,
         caption: "Reply ReceiveのPseudo Code"
-    ) <ipc_port::reply_receive_pseudo_code>
+    ) <a9n::ipc_port::reply_receive_pseudo_code>
 ]
 
 ==== Direct Context Switch <ipc_port::direct_context_switch>
@@ -1103,7 +1103,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 MicrokernelにおいてIPCは極めてCriticalな操作であり，可能な限りLow Latencyで実行する必要がある．
 そのためDirect Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限り#footnote[Schedulerに対象よりも高い優先度のContextが存在せず，なおかつ実行可能な場合を指す．]SenderからReceiverへ，またその逆のContextを直接Switchする．
 
-==== Identifier <ipc_port::identifier>
+==== Identifier <a9n::ipc_port::identifier>
 
 同じIPC Portを共有(Copy)することでIPCは実現されるが，どのContextからMessageが送信されたかを判別するためにIdentifier機構を実装した．
 IdentifierはFiasco.OCにおけるLabelやseL4におけるBadgeに相当する，Kernelによって正当性が保証されるCapability Slot固有の値である．
@@ -1119,7 +1119,7 @@ IPC Portに対するIdentify操作により，Word型の値をIPC Port(が格納
 
 あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights (@a9n::capability_rights) からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
 
-==== Capability Transfer <ipc_port::capability_transfer>
+==== Capability Transfer <a9n::ipc_port::capability_transfer>
 
 A9N MicrokernelはIPCを通じてCapabilityを転送 (Copy) できる．
 
@@ -1131,7 +1131,7 @@ Capability Transferは必ずIPC Bufferを介して行われるため，Virtual M
 ==== Data Structure
 
 #technical_term(name: `message_info`)[
-    IPCの細かい挙動を制御するための構造である (cf., @ipc_port::message_info)．
+    IPCの細かい挙動を制御するための構造である (cf., @a9n::ipc_port::message_info)．
     送信者はこの構造を設定し，受信者は受け取ることによって情報を取得できる．
 ]
 
@@ -1154,7 +1154,7 @@ Capability Transferは必ずIPC Bufferを介して行われるため，Virtual M
         text-size: 4pt,
     ),
     caption: "Message Info"
-) <ipc_port::message_info>
+) <a9n::ipc_port::message_info>
 
 #normal_table(
     "BLOCK", "設定されている場合，IPC操作はBlockされる",
@@ -1174,7 +1174,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #api_table(
     "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-    "message_info", "info", [送信するMessageの情報 \ (cf., @ipc_port::message_info)],
+    "message_info", "info", [送信するMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
 )
 
 #technical_term(name: `receive`)[IPC PortからMessageを受信する．]
@@ -1188,7 +1188,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #figure(
     api_table(
-        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
+        "message_info", "info", [受信したMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
         "word", "identifer", "送信元のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1200,14 +1200,14 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-        "message_info", "info", [送信するMessageの情報 \ (cf., @ipc_port::message_info)],
+        "message_info", "info", [送信するMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
     ),
     caption: [`call`の引数]
 )
 
 #figure(
     api_table(
-        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
+        "message_info", "info", [受信したMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
         "word", "identifer", "送信元のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1218,7 +1218,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #api_table(
     "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
-    "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @ipc_port::message_info)]
+    "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)]
 )
 
 #technical_term(name: `reply_receive`)[IPC Portに対してReply Receiveを実行する．]
@@ -1226,14 +1226,14 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor],
-        "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @ipc_port::message_info)],
+        "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)],
     ),
     caption: [`reply_receive`の引数]
 )
 
 #figure(
     api_table(
-        "message_info", "info", [受信したMessageの情報 \ (cf., @ipc_port::message_info)],
+        "message_info", "info", [受信したMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
         "word", "identifer", "送信元 (Caller) のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
@@ -1256,7 +1256,7 @@ Notification PortはIPC Portとは異なり，1WordのNotification Flag Fieldの
 
 === Identifier
 
-IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を持つ．
+IPC PortのIdentifier (cf., @a9n::ipc_port::identifier) と同じIdentifier機構を持つ．
 
 ==== Capability Call
 
@@ -1319,7 +1319,7 @@ IPC PortのIdentifier (cf., @ipc_port::identifier) と同じIdentifier機構を�
 
 === Interrupt Region Capability
 
-Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する (cf., @interrupt_region::make_port::example) ためのCapabilityである．
+Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する (cf., @a9n::interrupt_region::make_port::example) ためのCapabilityである．
 このCapabilityはGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．
 Genericを介さないためMemory Regionを消費することはない．
 
@@ -1348,7 +1348,7 @@ Genericを介さないためMemory Regionを消費することはない．
     ),
     ],
     caption: "Interrupt RegionからInterrupt Portを生成する例"
-) <interrupt_region::make_port::example>
+) <a9n::interrupt_region::make_port::example>
 
 ==== Capability Call
 
@@ -1369,7 +1369,7 @@ Genericを介さないためMemory Regionを消費することはない．
 === Interrupt Port Capability
 
 Interrupt PortはInterrupt Regionから生成されるCapabilityである．
-特定のIRQ Numberと1:1で対応しており，割り込み発生時に指定したNotification PortへNotificationを送信する (cf., @interrupt_port::interrupt::example)．
+特定のIRQ Numberと1:1で対応しており，割り込み発生時に指定したNotification PortへNotificationを送信する (cf., @a9n::interrupt_port::interrupt::example)．
 
 #figure(block(inset: 1em)[
     #diagram(
@@ -1392,7 +1392,7 @@ Interrupt PortはInterrupt Regionから生成されるCapabilityである．
     )
     ],
     caption: "Interrupt PortからNotification PortへのNotificationを送信する例"
-) <interrupt_port::interrupt::example>
+) <a9n::interrupt_port::interrupt::example>
 
 ==== Capability Call
 
@@ -1452,7 +1452,7 @@ IO PortもInterrupt Portと同様にGenericからConvertできず，Init Server�
 ==== Region
 
 IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ読み書き操作が可能である．
-また，IO Portは自身のSubsetであるIO PortをMint操作によって生成することができる (cf., @io_port::mint::example)．これにより，特定のAddressに対してのみ読み書き操作を許可することができ，特権の最小化を実現する．
+また，IO Portは自身のSubsetであるIO PortをMint操作によって生成することができる (cf., @a9n::io_port::mint::example)．これにより，特定のAddressに対してのみ読み書き操作を許可することができ，特権の最小化を実現する．
 
 #figure([
     #diagram(
@@ -1492,7 +1492,7 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
         edge(<ioport_b>, <ioport_e>, [Mint], "-|>", label-side: center, label-pos: 40%, label-anchor: "north"),
     )],
     caption: "MintによるIO PortのSubset生成例"
-) <io_port::mint::example>
+) <a9n::io_port::mint::example>
 
 ==== Capability Call
 
