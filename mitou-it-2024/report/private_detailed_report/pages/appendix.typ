@@ -28,8 +28,30 @@
 #link_with_description(url: "https://github.com/horizon2038/A9NLoader", description: "A9N Boot Protocol(x86_64) に従ったReference Bootloader実装")
 #link_with_description(url: "https://github.com/horizon2038/Nun", description: "A9N Microkernel上で動作するOSを開発するためのRust製Framework")
 
+== Sample Codes
+
+=== Nunを用いたHello Worldプログラム <nun::hello_world>
+
+==== `hello-world/src/main.rs`
+
+```rust
+#![no_std]
+#![no_main]
+
+// using Nun!
+use nun;
+
+// configure entry point
+nun::entry!(main);
+
+fn main(init_info: &nun::InitInfo) {
+    nun::println!("Hello, Nun World!");
+
+    loop {}
+}
+```
+
 #show bibliography : set heading(level: 2)
 #pagebreak()
 #bibliography("/resources/references.bib", title: "参考文献")
 
-// == Sample Codes

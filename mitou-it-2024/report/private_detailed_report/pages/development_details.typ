@@ -1925,8 +1925,9 @@ Nun API LibraryはA9N MicrokernelにおけるABI規約 (cf., @a9n::abi) を満�
 
 ==== Basic Types
 
-A9N Microkernelにおける基本型sをRustにおける型として再定義する (cf., @nun::basic_types::types)．そのため，機能的にはC++における実装と同等である．
+A9N Microkernelにおける基本型をRustにおける型として再定義する (cf., @nun::basic_types::types)．そのため，機能的にはC++における実装と同等である．
 RustのCoding Guidelineに従い，C++においてSnake Caseで表現されていた型はCamel Caseで実現される．
+これらはNun Module内に存在し，`nun::*`のように使用する．
 
 #figure(
     normal_table(
@@ -1944,10 +1945,10 @@ RustのCoding Guidelineに従い，C++においてSnake Caseで表現されて�
 #figure(
     normal_table(
         "BYTE_SIZE", "ByteのSize",
-        "WORD_SIZE", "WordのSize",
+        "WORD_SIZE", "`Word`のSize",
         "PAGE_SIZE", "FrameのSize",
         "BYTE_BITS", "1byteのBit数",
-        "WORD_BITS", "WordのBit数；WORD_SIZE * BYTE_BITSとして定義される",
+        "WORD_BITS", "`Word`のBit数；`WORD_SIZE` * `BYTE_BITS`として定義される",
     ),
 ) <nun::basic_types::constants>
 
@@ -1978,11 +1979,61 @@ Kernel CallにおけるCapability Call, Yield Call, Debug CallはRustの関数�
 
 === Build System <nun::build_system>
 
-=== HAL <nun::hal>
+Nunを用いたOSのBuildには，Nunに統合されたCargoによるBuild Systemが使用される．
+
+==== Custom Target 
+
+NunにはBuild対象とするArchitecture用のCustom Targetが用意される．したがって，`cargo build --target {arch}-unknown-a9n`#footnote[正確には\ `cargo build --target Nun/arch/{arch}-unknown-a9n.json -Z build-std-features=compiler-builtins-mem --release
+`]によりBuildが可能となる．
+Custom TargetによってLinker ScriptやArchitecture-DependentなBuild Optionが自動的に適用される．
+現在，Targetとしてx86_64がサポートされている．
+
+==== x86_64
+
+x86_64におけるCustom Targetは以下のように定義される (cf., @nun::build_system::x86_64::custom_target)：
+
+#figure(
+    ```json
+    {
+        "llvm-target": "x86_64-unknown-none",
+        "data-layout": "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128",
+        "arch": "x86_64",
+        "target-endian": "little",
+        "target-pointer-width": "64",
+        "target-c-int-width": "32",
+        "os": "none",
+        "executables": true,
+        "linker-flavor": "ld.lld",
+        "linker": "rust-lld",
+        "relocation_model": "static",
+        "pre-link-args": {
+            "ld.lld": [
+                "-T", "arch/x86_64/user.ld",
+                "-Map=init.map",
+                "-z", "norelro",
+                "--static",
+                "--nostdlib"
+            ]
+        },
+        "panic-strategy": "abort",
+        "disable-redzone": true,
+        "features": ""
+    }
+    ```,
+    caption: "x86_64におけるCustom Target"
+) <nun::build_system::x86_64::custom_target>
+
+- Target TripleをLLVMの形式で指定する．
+- その他Target FieldはRustによって規定される形式 (cf., @RustC:2025) に沿い指定する．
+
 
 === Entry Point <nun::entry_point>
 
 === API <nun::api>
+
+=== Code Exapmle <nun::code_example>
+
+Nunを用いた最小なOSのコード例を付録に収録している（@nun::hello_world）．わずか8行#footnote[コメント・空行を含まない．]でUser Mode上に動作するOSを実現している．
 
 /* ===== KOITO ===== */
 
