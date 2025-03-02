@@ -103,10 +103,10 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
 
 SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．
 例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．
-しかしながらMemoryに関連するCapability(e.g., Generic, Page Table, Frame)を考えたとき，これらのために1つずつUniqueなInstanceを作成していては効率が悪い．
+しかしながらMemoryに関連するCapability(e.g., Generic, Page Table, Frame)を考えたとき，これらのために1つずつUniqueなInstanceを生成していては効率が悪い．
 よって，そのようなUsecaseに対応するためSlot Local Dataを導入した．
 対象のCapabilityはSlot Local Dataにそれらの情報を保持し，Capability Componentとして指すInstanceはCapabilityごとに単一のものを共有するようなアプローチを取ることができる．
-これにより，Memoryの新規Allocationを必要とせずにCapabilityを作成可能とした．
+これにより，Memoryの新規Allocationを必要とせずにCapabilityを生成可能とした．
 このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
 
 ==== Capability Rights <capability_rights>
@@ -137,7 +137,7 @@ Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御�
 ) <capability_rights_definition>
 
 Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．
-原則として，Capabilityは作成時点にすべてのRights Bitが設定される．
+原則として，Capabilityは生成時点にすべてのRights Bitが設定される．
 ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
 
 ==== Dependency Node <dependency_node>
@@ -542,13 +542,13 @@ GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsか�
 - WatermarkはGenericの使用状況を示すPhysical Addressである．
 - Device BitsはMemory RegionがDeviceのために使用されるような場合(e.g., MMIO)に設定される．
 
-Generic CapabilityはすべてのCapabilityを作成するためのFactoryとして機能する．
+Generic CapabilityはすべてのCapabilityを生成するためのFactoryとして機能する．
 Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
-作成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
+生成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
 
 ==== $log_2$ Based Allocation
 
-GenericのConvert操作時，次のステップでCapabilityを作成する：
+GenericのConvert操作時，次のステップでCapabilityを生成する：
 
 + Convert操作によって指定されたCapability TypeとSpecific BitsからSize Radixを得る．
 + Size Radix分をAllocate可能か確認する．
@@ -595,7 +595,7 @@ Genericの再利用には，ConvertされたすべてのCapabilityをRemoveす�
 これはGenericに対してRevokeを実行することで再帰的に行われる．
 すなわち，ある$"Capability"_"A"$をConvertしたあとに$"Capability"_"B"$をConvertし，$"Capability"_"A"$をRemoveしても$"Capability"_"A"$が使用していた領域を再利用できない．
 これはGenericの構造を考えれば明らかである．Genericは単純化と高速化のために単一のWatermarkのみで使用量管理を実現している．したがって，高粒度な再利用をKernelは提供しない．
-その実現には，Genericから再利用単位ごとに子となるようなGenericを作成する必要がある#footnote[この実装は完全にUser-Levelで実現される．]．
+その実現には，Genericから再利用単位ごとに子となるようなGenericを生成する必要がある#footnote[この実装は完全にUser-Levelで実現される．]．
 
 ==== Capability Call
 
@@ -603,9 +603,9 @@ Genericの再利用には，ConvertされたすべてのCapabilityをRemoveす�
 
 #api_table(
     "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
-    "capability_type", "type", "作成するCapabilityのType",
-    "word", "specific_bits", [Capability作成時に使用する固有Bits \ cf., @generic::specific_bits],
-    "word", "count", "作成するCapabilityの個数",
+    "capability_type", "type", "生成するCapabilityのType",
+    "word", "specific_bits", [Capability生成時に使用する固有Bits \ cf., @generic::specific_bits],
+    "word", "count", "生成するCapabilityの個数",
     "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
     "word", "node_index", "格納先NodeのIndex",
 )
@@ -697,7 +697,7 @@ Depth : 0はFrame Capabilityに対応するため，これをMapすることでV
 
 Architecture-Specificな知識を必要としないPortableなVirtual Memory Management Serverを実現する場合，典型的にはまず空のAddress Space Capabilityに対して`get_unset_depth`を実行することが推奨される．ここで得た値はそのまま必要なPage Tableの数とDepthに対応するためである．
 
-もちろん，簡易化のために初めからDepthを指定してPage Table Capabilityを作成することも可能である．このような実装はSystemのPortabilityを損なうが，Project開始時のPrototypeとしては有用である．
+もちろん，簡易化のために初めからDepthを指定してPage Table Capabilityを生成することも可能である．このような実装はSystemのPortabilityを損なうが，Project開始時のPrototypeとしては有用である．
 
 ==== Capability Call
 
@@ -1359,7 +1359,7 @@ Genericを介さないためMemory Regionを消費することはない．
 
 #api_table(
     "descriptor", "interrupt_region_descriptor", "対象Interrupt RegionへのDescriptor",
-    "word", "irq_number", "作成するInterrupt PortのIRQ Number",
+    "word", "irq_number", "生成するInterrupt PortのIRQ Number",
     "capability_descriptor", "node_descriptor", "Interrupt Portを格納するNodeへのDescriptor",
     "word", "index", "Interrupt Portを格納するNodeのIndex (Offset)",
 )
@@ -1495,6 +1495,45 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
 ) <io_port::mint::example>
 
 ==== Capability Call
+
+#technical_term(name: `read`)[
+    IO Portから値をReadする．
+]
+
+#figure(
+    api_table(
+        "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
+    ),
+    caption: [`read`の引数]
+)
+
+#figure(
+    api_table(
+        "word", "data", "IO PortからReadした値",
+    ),
+    caption: [`read`の戻り値]
+)
+
+#technical_term(name: `write`)[
+    IO Portに値をWriteする．
+]
+
+#api_table(
+    "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
+    "word", "data", "IO PortにWriteする値",
+)
+
+#technical_term(name: `mint`)[
+    IO PortのSubsetを生成する．
+]
+
+#api_table(
+    "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
+    "word", "new_address_min", "生成するSubsetの最低Address",
+    "word", "new_address_max", "生成するSubsetの最高Address",
+    "capability_descriptor", "node_descriptor", "生成したSubsetを格納するNodeへのDescriptor",
+    "word", "index", "生成したSubsetを格納するNodeのIndex (Offset)",
+)
 
 #pagebreak()
 
