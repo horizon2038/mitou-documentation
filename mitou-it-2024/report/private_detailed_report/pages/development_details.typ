@@ -1254,7 +1254,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 Notification PortはAsynchronous Notificationを実現するためのCapabilityである．
 Notification PortはIPC Portとは異なり，1WordのNotification Flag Fieldのみを持つ．
 
-=== Identifier
+==== Identifier
 
 IPC PortのIdentifier (cf., @a9n::ipc_port::identifier) と同じIdentifier機構を持つ．
 
@@ -1463,23 +1463,6 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
         spacing: 2em,
         node-inset: 1em,
 
-        /*
-        node((0, 0.5), "Reply (Source)"),
-
-        node((4, -0.5), "Reply (Destination)"),
-
-        node((2, 0), "IPC Port"),
-
-        edge((0, 0), (2, 0), `call`, "-|>", label-side: center, ),
-        edge((4, 0), (2, 0), `receive + reply`, "-|>", label-side: center, ),
-
-        edge((0, 0), (0, -1), (4, -1), (4, -0.5), [Configure], "..|>", label-side: center, ),
-        edge((4, 0), (4, 1), (0, 1), (0, 0.5), [Configure], "..|>", label-side: center, ),
-
-        edge((4, -0.5), (0, -0.5), (0, 0), [Copy Message], "-|>", label-side: center, label-pos: 21.5%),
-        edge((0, 0.5), (4, 0.5), (4, 0), [Copy Message], "-|>", label-side: center, label-pos: 20.5%),
-        */
-
         node((0, 0), [$"IOPort"_"A"$ \[0x0000 - 0xFFFF)], name: <ioport_a>),
         node((-0.75, 1), [$"IOPort"_"B"$ \[0x0000 - 0x9000)], name: <ioport_b>),
         node((0.75, 1), [$"IOPort"_"C"$ \[0x9000 - 0xFFFF)], name: <ioport_c>),
@@ -1612,11 +1595,151 @@ x86_64におけるKernel CallのABIは以下のように定義される (cf., @a
 
 === Boot Protocol <a9n::boot_protocol>
 
+A9N MicrokernelはA9N Boot ProtocolをもってBootする必要があり，この根幹をなすのがBoot Infoである．
+Boot InfoはKernelの起動に必要な情報を格納する構造体であり，以下のように定義される (cf., @a9n::boot_protocol::boot_info)：
+
+#figure(
+    ```cpp
+    static constexpr a9n::word ARCH_INFO_MAX = 8;
+
+    struct boot_info
+    {
+        memory_info     boot_memory_info;
+        init_image_info boot_init_image_info;
+        a9n::word       arch_info[ARCH_INFO_MAX];
+    } __attribute__((packed));
+
+    ```,
+    caption: "A9N Boot Info"
+) <a9n::boot_protocol::boot_info>
+
+#technical_term(name: `memory_info`)[
+    Memory Info(@a9n::boot_protocol::memory_info) はKernelに利用可能なPhysical Memory Regionを伝達するための構造である．
+    Kernelの起動前にメモリ領域の開始Address, Page SizeをUnitとするPage Count, およびMemory Typeを収集し格納する必要がある．
+    Kernelはこの情報をもとにGenericを生成し，後述するInit Info (@a9n::init_protocol::init_info) へ情報を再格納してUserに委譲する．
+]
+
+#figure(
+    ```cpp
+    enum class memory_map_type
+    {
+        FREE,
+        DEVICE,
+        RESERVED,
+    };
+    struct memory_map_entry
+    {
+        a9n::physical_address start_physical_address;
+        a9n::word             page_count;
+        memory_map_type       type;
+    };
+    struct memory_info
+    {
+        a9n::word         memory_size;
+        uint16_t          memory_map_count;
+        memory_map_entry *memory_map;
+    };
+    ```,
+    caption: "A9N Boot InfoにおけるMemory Info"
+) <a9n::boot_protocol::memory_info>
+
+#technical_term(name: `init_image_info`)[
+    A9N MicrokernelはELFやPEといった特定のExecutable Formatに依存しない．したがって，Kernelが起動する前のBootloader PhaseにおいてInit Serverを適切に展開しLoadする必要がある．
+    そのようにしてLoadされたInit Serverの情報はInit Image Info (cf., @a9n::boot_protocol::init_image_info) に格納されKernelに渡される．
+]
+
+#figure(
+    ```cpp
+    struct init_image_info
+    {
+        a9n::physical_address loaded_address;
+        a9n::word             init_image_size;
+        a9n::virtual_address  entry_point_address;
+        a9n::virtual_address  init_info_address;
+        a9n::virtual_address  init_ipc_buffer_address;
+    } __attribute__((packed));
+    ```,
+    caption: "A9N Boot InfoにおけるInit Image Info"
+) <a9n::boot_protocol::init_image_info>
+
+#technical_term(name: `arch_info`)[
+    Architecture InfoはArchitecture-SpecificなFieldであり，主にHALの起動に使用される．
+    また，殆どの場合Init Info (@a9n::init_protocol::init_info) の同名Fieldへ再格納される．
+]
+
 ==== x86_64
+
+x86_64におけるBoot InfoのArchitecture Infoは以下のように定義される．現在はたった一つのFieldのみが使用されており，残りは将来の拡張用に予約されている (cf., @a9n::boot_protocol::x86_64::arch_info)：
+
+#figure(
+    normal_table(
+        "Architecture Info[0]", [RSDP#footnote[ACPIにおけるRSDP:Root System Description PointerのPhysical Address．]],
+    ),
+    caption: "x86_64におけるArchitecture Info"
+) <a9n::boot_protocol::x86_64::arch_info>
+
+現在のA9N (x86_64)はEDK2-BasedのA9NLoaderによってUEFI環境上でBootされるため，RSDPはA9NLoaderがUEFIの手続きに従って取得する．
+
+==== Jump to Kernel
+
+Boot Info (cf., @a9n::boot_protocol::boot_info) はKernel Main Entry Pointへの引数として渡される必要がある．
+Kernel Main Entry Pointは以下のように定義される (cf., @a9n::boot_protocol::kernel_entry)：
+
+#figure(
+    ```cpp
+    extern "C" int kernel_entry(a9n::kernel::boot_info *target_boot_info);
+    ```,
+    caption: "Kernel Main Entry Point"
+) <a9n::boot_protocol::kernel_entry>
+
+このEntry PointはArchitectureに依存しないものである．したがって，典型的なKernelの起動は以下のPhaseによって行われる (cf., @a9n::boot_protocol::kernel_boot_sequence)：
+
+#figure([
+    #diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (4em, 1em),
+        node-inset: 1em,
+
+        // draw nodes
+        // boot
+        node((0, 1), [$"Startup"$], name: <startup>, shape: circle, extrude: (-3, 0), fill: luma(240)),
+        node((1, 1), [$"Bootloader"$], name: <bootloader>),
+
+        // kernel
+        node((3, 0), [$"A9N::HAL"$], name: <a9n::hal>),
+        node((3, 2), [$"A9N::Kernel"$], name: <a9n::kernel>),
+        node(enclose: (<a9n::hal>, <a9n::kernel>), name: <a9n>),
+
+        // user
+        node((5, 1), [$"Init Server"$], name: <init_server>),
+
+        edge(<startup>, <bootloader>, "-|>", label-side: center),
+        edge(<bootloader>, <a9n>, "-|>", [Load], label-side: center),
+        edge(<bootloader>, (1, 0), <a9n::hal>, "-|>", [Jump], label-side: center, label-pos: 75%),
+        edge(<bootloader>, (1, 4), (5, 4), <init_server>, "-|>", [Load], label-side: center),
+        edge(<a9n::hal>, <a9n::kernel>, "-|>", [Jump to Entry], label-side: center),
+        edge(<a9n>, <init_server>, "-|>", [Jump], label-side: center),
+    )
+    ],
+    caption: "Kernel Boot Sequence"
+) <a9n::boot_protocol::kernel_boot_sequence>
 
 #pagebreak()
 
 === Init Protocol <a9n::init_protocol>
+
+A9N MicrokernelはInit ServerをBoot Infoの情報をもとに生成し起動する．
+Init Serverに利用可能なCapabilityや初期状態を提供するため，Init Info構造体 (cf., @a9n::init_protocol::init_info) が使用される．
+
+#figure(
+    ```cpp
+    test
+    ```,
+    caption: "A9N Init Info"
+) <a9n::init_protocol::init_info>
 
 #pagebreak()
 
