@@ -25,6 +25,31 @@ A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Mess
 そのため，言語のLibraryレベルでMapperを作成することにより，NativeなResult型やその他の型を返すことができる．
 このようなAPIのRustによるReference ImplementationはNun OS Frameworkに内包されている．
 
+具体的な型定義は以下の通り (cf., @a9n::basic_types::types) である．これらは`a9n`Namespace内に定義される．
+
+#figure(
+    normal_table(
+        "word", "Architecture-Specificな幅を持つ符号なし整数型",
+        "sword", "Architecture-Specificな幅を持つ符号付き整数型",
+        "physical_address", "Physical Addressを表現する型",
+        "virtual_address", "Virtual Addressを表現する型",
+        "capability_descriptor", [Capability Descriptor (cf., @a9n::capability_descriptor)を表現する型],
+    ),
+    caption: "Types"
+) <a9n::basic_types::types>
+
+また，以下の定数群 (cf., @a9n::basic_types::constants) も同様に定義される．
+
+#figure(
+    normal_table(
+        "BYTE_SIZE", "ByteのSize",
+        "WORD_SIZE", [`word`のSize],
+        "PAGE_SIZE", "FrameのSize",
+        "BYTE_BITS", "1byteのBit数",
+        "WORD_BITS", [`word`のBit数；WORD_SIZE \* BYTE_BITSとして定義される],
+    ),
+) <a9n::basic_types::constants>
+
 === API Primitive <a9n::api_primitive>
 
 A9N MicrokernelはUserに対してKernel Callを提供する．
@@ -67,6 +92,7 @@ Capability Callの実行時，First ArgumentとしてCapability Descriptorを指
 
 Capabilityは内部的にCapability Slotと呼ばれるデータ構造に格納される．
 Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capability Rights，Dependency Nodeから構成される．
+また，Capability Slotは$"WordWidth" * 8$byteにAlignされる(e.g., 32bit => 32byte, 64bit => 64byte)．したがって，Cache Line上に乗せやすくなる．
 
 ==== Capability Component <a9n::capability_component>
 
@@ -1692,7 +1718,13 @@ Kernel Main Entry Pointは以下のように定義される (cf., @a9n::boot_pro
     caption: "Kernel Main Entry Point"
 ) <a9n::boot_protocol::kernel_entry>
 
-このEntry PointはArchitectureに依存しないものである．したがって，典型的なKernelの起動は以下のPhaseによって行われる (cf., @a9n::boot_protocol::kernel_boot_sequence)：
+このEntry PointはArchitectureに依存しないものである．したがって，典型的にKernelは以下のPhaseによって起動される (cf., @a9n::boot_protocol::kernel_boot_sequence)：
+
++ Bootloaderが起動される．
++ BootloaderがKernelとInit ServerをLoadする．
++ BootloaderがHALの提供するArchitecture-SpecificなEntry PointへJumpする．
++ HALがKernel Main Entry PointへJumpする．
++ KernelがInit Serverを起動する．
 
 #figure([
     #diagram(
@@ -1732,18 +1764,134 @@ Kernel Main Entry Pointは以下のように定義される (cf., @a9n::boot_pro
 === Init Protocol <a9n::init_protocol>
 
 A9N MicrokernelはInit ServerをBoot Infoの情報をもとに生成し起動する．
-Init Serverに利用可能なCapabilityや初期状態を提供するため，Init Info構造体 (cf., @a9n::init_protocol::init_info) が使用される．
+Init Serverに利用可能なCapabilityや初期状態を提供するため，Init Info構造体 (cf., @a9n::init_protocol::init_info) が定義される．
 
 #figure(
     ```cpp
-    test
+    struct init_info
+    {
+        // kernel description
+        a9n::word kernel_version {};
+
+        // architectural information
+        a9n::word arch_info[ARCH_INFO_MAX];
+
+        // initial ipc buffer
+        a9n::virtual_address       ipc_buffer;
+
+        // initial generic
+        generic_descriptor         generic_list[INITIAL_GENERIC_COUNT_MAX];
+        a9n::word                  generic_list_count;
+    };
     ```,
     caption: "A9N Init Info"
 ) <a9n::init_protocol::init_info>
 
+Generic Descriptor (cf., @a9n::init_protocol::generic_descriptor) はInit Serverが利用可能なGenericの情報を格納する構造体である．
+Generic DescriptorのIndexはそのままInit Slot Offset (cf., @a9n::init_protocol::init_slot_offset) で定義されたGeneric Node内のIndexとなる．
+
+#figure(
+    ```cpp
+    struct generic_descriptor
+    {
+        a9n::physical_address address;
+        uint8_t               size_radix;
+        bool                  is_device;
+    };
+    ```,
+    caption: "Generic Descriptor"
+) <a9n::init_protocol::generic_descriptor>
+
+Init Serverに限りKernelが初期状態としてRoot Nodeとその内容を提供する．
+Kernelが生成したCapabilityは以下のInit Slot Offset (cf., @a9n::init_protocol::init_slot_offset) に従い，Init ServerのRoot Nodeへ格納される：
+
+#figure(
+    normal_table(
+        "Index[0]", "Reserved",
+        "Index[1]", "Process Control Block",
+        "Index[2]", "Process Address Space",
+        "Index[3]", "Process Root Node",
+        "Index[4]", "Process Page Table Node",
+        "Index[5]", "Process Frame Node",
+        "Index[6]", "Process IPC Buffer Frame",
+        "Index[7]", "Generic Node",
+        "Index[8]", "Interrupt Region",
+        "Index[9]", "IO Port",
+    ),
+    caption: "Init Slot Offset"
+) <a9n::init_protocol::init_slot_offset>
+
+特筆すべきはIndex[3]のProcess Root Nodeである．これは格納されているNode自体を表す再帰的なCapabilityである．
+Root Nodeに対する操作を直接実行することはできないが，このような手法を用いることですべてを操作可能とする．
+
+#v(1em)
+
+Init Infoの内容を書き込むAddressは簡単な計算で求めることができる．A9N Microkernelは0を基準としたVirtual Addressの使用をInit Serverに要求するため，(@a9n::boot_protocol::init_image_info)のFieldである$"LoadedAddress" + "InitInfoAddress"#footnote[Virtual Addressは単なるOffsetとなる．]$がInit InfoのPhysical Addressとなる．
+
 #pagebreak()
 
 == Nun Operating System Frameworkの開発
+
+A9N MicrokernelをコアとするOSを構築するためには，A9N Init Protocol (cf., @a9n::init_protocol) で示したProtocolに従ってInit Serverを構築する必要がある．
+これを容易かつSecureに実現するため，Rustを用いてOSを構築可能なNun Operating System Frameworkを開発した．
+
+=== API Library <nun::api>
+
+Nun API LibraryはA9N MicrokernelにおけるABI規約 (cf., @a9n::abi) を満たしたKernel Callを実装するLibraryである，
+このLibraryはRustの恩恵を最大限に活かしたError Handlingと操作が可能であり，OSのModernな開発を実現する．
+
+==== Basic Types
+
+A9N Microkernelにおける基本型sをRustにおける型として再定義する (cf., @nun::basic_types::types)．そのため，機能的にはC++における実装と同等である．
+RustのCoding Guidelineに従い，C++においてSnake Caseで表現されていた型はCamel Caseで実現される．
+
+#figure(
+    normal_table(
+        "Word", "Architecture-Specificな幅を持つ符号なし整数型",
+        "Sword", "Architecture-Specificな幅を持つ符号付き整数型",
+        "PhysicalAddress", "Physical Addressを表現する型",
+        "VirtualAddress", "Virtual Addressを表現する型",
+        "CapabilityDescriptor", "Capability Descriptorを表現する型",
+    ),
+    caption: "Types"
+) <nun::basic_types::types>
+
+また，以下の定数群 (cf., @nun::basic_types::constants) も同様に定義される．
+
+#figure(
+    normal_table(
+        "BYTE_SIZE", "ByteのSize",
+        "WORD_SIZE", "WordのSize",
+        "PAGE_SIZE", "FrameのSize",
+        "BYTE_BITS", "1byteのBit数",
+        "WORD_BITS", "WordのBit数；WORD_SIZE * BYTE_BITSとして定義される",
+    ),
+) <nun::basic_types::constants>
+
+次に，Capability Error型とCapability Resultが定義される (cf., @nun::basic_types::capability_result)．Kernel Callやそれに属するCapability CallはC ABIに依存しないため (cf., @a9n::capability_call::abbreviation, @a9n::basic_types)，標準のResult型を使用することができる．
+
+#figure(
+    ```rust
+    #[derive(Debug)]
+    #[repr(usize)]
+    pub enum CapabilityError {
+        IllegalOperation,
+        PermissionDenied,
+        InvalidDescriptor,
+        InvalidDepth,
+        InvalidArgument,
+        Fatal,
+        DebugUnimplemented,
+    }
+
+    pub type CapabilityResult = result::Result<(), CapabilityError>;
+    ```,
+    caption: "Capability ResultのRust実装"
+) <nun::basic_types::capability_result>
+
+==== Kernel Call
+
+Kernel CallにおけるCapability Call, Yield Call, Debug CallはRustの関数としてBindingされる．
 
 === Build System <nun::build_system>
 
