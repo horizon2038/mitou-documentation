@@ -1558,17 +1558,65 @@ TODO
 === ABI <a9n::abi>
 
 A9N MicrokernelのHALはArchitectureごとにKernel ABIを定義する．
-ここでいうABIは主にVirtual Message RegisterにおけるHardware RegisterのMappingを指す．
+ここでいうABIは，主にKernel CallとVirtual Message RegisterにおけるHardware RegisterのMappingを指す．
+
+==== Hardware-Independent ABI Constants
+
+Kernel Call Typeは全てのABIにおける共通値が以下として定義される (cf., @a9n::abi::hardware_independent_constants)：
+
+#figure(
+    api_table(
+        "sword", "Capability Call", "-1",
+        "sword", "Yield Call", "-2",
+        "sword", "Debug Call", "-3",
+    ),
+    caption: "Kernel Call Type"
+) <a9n::abi::hardware_independent_constants>
+
+通常のSystemにおけるKernel Call TypeはSystem Call Numberとして知られるが，A9N Microkernelではこの値を負数として定義する．
+Kernel Call時に存在しないKernel Call Typeの値を指定するとIllegal Kernel Call Faultが発生する．したがって，ABI-LevelのKernel Call (System Call) Emulationが実現しやすくなる．
 
 ==== x86_64 <a9n::abi::x86_64>
 
+x86_64におけるKernel CallのABIは以下のように定義される (cf., @a9n::abi::x86_64::kernel_call)：
+
+#figure(
+    normal_table(
+        "Kernel Call Type", "Mapped to RDI",
+        "Reserved", "Mapped to RAX （破壊される）"
+    ),
+    caption: "x86_64におけるKernel Call ABI"
+)<a9n::abi::x86_64::kernel_call>
+
+
+また，Virtual Message RegisterのABIは以下のように定義される (cf., @a9n::abi::x86_64::virtual_message_register)：
+
+#figure(
+    normal_table(
+        "Message Register [0]", "Mapped to RSI",
+        "Message Register [1]", "Mapped to RDX",
+        "Message Register [2]", "Mapped to R8",
+        "Message Register [3]", "Mapped to R9",
+        "Message Register [4]", "Mapped to R10",
+        "Message Register [5]", "Mapped to R12",
+        "Message Register [6]", "Mapped to R13",
+        "Message Register [7]", "Mapped to R14",
+        "Message Register [8]", "Mapped to R15",
+    ),
+    caption: "x86_64におけるVirtual Message Register ABI"
+) <a9n::abi::x86_64::virtual_message_register>
+
+これを超えるMessage Register (e.g., Message Register [$"n", n in NN, n > 8 $]) はIPC BufferのMessage Field [$n$] にMappingされる．
+
 #pagebreak()
 
-=== Boot Protocol <boot_protocol>
+=== Boot Protocol <a9n::boot_protocol>
+
+==== x86_64
 
 #pagebreak()
 
-=== Init Protocol <init_protocol>
+=== Init Protocol <a9n::init_protocol>
 
 #pagebreak()
 
