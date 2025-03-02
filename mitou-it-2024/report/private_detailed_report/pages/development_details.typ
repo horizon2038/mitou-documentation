@@ -13,7 +13,7 @@
 
 === History of A9N Microkernel
 
-=== Basic Types
+=== Basic Types <a9n::basic_types>
 
 A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．
 Kernel内部では幅が固定された型を基本的に使用せずに`word`型を使用する．
@@ -25,7 +25,7 @@ A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Mess
 そのため，言語のLibraryレベルでMapperを作成することにより，NativeなResult型やその他の型を返すことができる．
 このようなAPIのRustによるReference ImplementationはNun OS Frameworkに内包されている．
 
-=== API Primitive
+=== API Primitive <a9n::api_primitive>
 
 A9N MicrokernelはUserに対してKernel Callを提供する．
 Kernel Callは細分化することができ，以下2 + 1個のAPIを提供する．これらは従来型SystemにおけるSystem Callに相当するものである:
@@ -36,7 +36,7 @@ Kernel Callは細分化することができ，以下2 + 1個のAPIを提供す�
 
 従来型のSystem，例えばLinux KernelのSystem Call数は2024年時点で300を超える @LinuxSyscalls:2024 が，A9Nはその1/100程度でSystemを構築することが可能である．
 
-=== Capability Overview
+=== Capability Overview <a9n::capability_overview>
 
 // Capabilityの基礎概念を説明する
 A9N Microkernelの実装にはObject-Capability Model @DennisEtAl:1966 によるCapability-Based Securityを採用し，従来のシステムが抱えていた課題を解消した．
@@ -50,7 +50,7 @@ Capabilityは特権的リソース : Objectに対するアクセス権限を示�
 
 Capabilityは複数のContext間でCopyやMoveが可能である．この仕組みにより，UserはCapabilityをServer間で委譲して特権的な操作の実行範囲を最小化できる．
 
-=== Capabilityの操作体系
+=== Capabilityの操作体系 <a9n::capability_operation>
 
 A9N Microkernelにおいて，操作対象のCapabilityを指定するためにCapability Descriptorと呼ばれる符号なし整数型を用いる．
 Capability Descriptorは後述するCapability Nodeを再帰的に探索するためのAddressである．
@@ -63,14 +63,14 @@ Capability Callの実行時，First ArgumentとしてCapability Descriptorを指
     caption: "Capability CallのPseudo Code",
 ) <capability_call_pseudo_code>
 
-=== Capability Slot
+=== Capability Slot <a9n::capability_slot>
 
 Capabilityは内部的にCapability Slotと呼ばれるデータ構造に格納される．
 Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capability Rights，Dependency Nodeから構成される．
 
-==== Capability Component
+==== Capability Component <a9n::capability_component>
 
-すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@capability_component)．
+すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@a9n::capability_component::definition)．
 Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposite Patternを統合したものであり，Capabilityの実行と初期化，探索を統一的なInterfaceによって提供する.
 
 #figure(
@@ -95,11 +95,11 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
     };
     ```,
     caption: "Capability ComponentのInterface",
-) <capability_component>
+) <a9n::capability_component::definition>
 
 すべてのCapabilityはCapability Componentの実装である．
 
-==== Slot Local Data <slot_local_data>
+==== Slot Local Data <a9n::slot_local_data>
 
 SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．
 例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．
@@ -109,7 +109,7 @@ SlotにCapability ComponentへのPointerを格納するだけでは問題が生�
 これにより，Memoryの新規Allocationを必要とせずにCapabilityを生成可能とした．
 このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
 
-==== Capability Rights <capability_rights>
+==== Capability Rights <a9n::capability_rights>
 
 前述した通り，一部の例外を除いてCapabilityはCopyやMoveが可能である．
 CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityとして扱われる．
@@ -117,7 +117,7 @@ CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityと
 しかし，これらのCapabilityに対して別々のアクセス制御を実行したいUsecaseが存在する．
 典型例として，IPC Port Capabilityを親が子に共有するが，子からはこのCapabilityを削除できないようにしたい#footnote()[Dependency Nodeを除いて親や子といった概念はKernelに存在しない．これはKernelを使用するOS Layerでみたときの例である．]場合がある．
 このようなシナリオに対応するため，Capability Slot固有のCapability Rightsを導入した．
-Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@capability_rights_definition)．
+Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@a9n::capability_rights::definition)．
 
 #figure(
     ```cpp
@@ -134,15 +134,15 @@ Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御�
 
     ```,
     caption: "Capability Rightsの定義",
-) <capability_rights_definition>
+) <a9n::capability_rights::definition>
 
 Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．
 原則として，Capabilityは生成時点にすべてのRights Bitが設定される．
 ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
 
-==== Dependency Node <dependency_node>
+==== Dependency Node <a9n::dependency_node>
 
-Capabilityはその依存関係をDependency Node (@dependency_node_definition) によって管理する．
+Capabilityはその依存関係をDependency Node (@a9n::dependency_node_definition) によって管理する．
 Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
 
 #figure(
@@ -157,7 +157,7 @@ Dependency Nodeは依存関係にあるCapability Slotを保持するが，`dept
     };
     ```,
     caption: "Capability SlotのDependency Node部",
-) <dependency_node_definition>
+) <a9n::dependency_node_definition>
 
 - 親の区別は可能だが，通常使用されないため省略される．
 - `next_slot`もしくは`preview_slot`の`depth`が自分自身の`depth`と等しい場合，そのSlotは兄弟である．
@@ -167,7 +167,7 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 
 #pagebreak()
 
-=== Virtual Message Register <virtual_message_register>
+=== Virtual Message Register <a9n::virtual_message_register>
 
 A9N MicrokernelではCapability CallのためにVirtual Message Register#footnote[L4 Microkernel FamilyにおけるUTCBと同等]機構を使用する．
 Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
@@ -180,7 +180,7 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 - Hardware RegisterへのAccessは一般に高速であるため，Message CopyのOverheadを最小限に抑えることができる．
 - IPC BufferはCapabilityによって存在が保証されるため，Kernel SpaceにおけるUser Space起因のPage Faultは発生しない．
 
-=== Scheduler <scheduler>
+=== Scheduler <a9n::scheduler>
 
 A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．
 Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持つ．
@@ -188,7 +188,7 @@ Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持
 このアプローチはQueue操作を簡易化し，なおかつHot-Cache内の実行による高速化を実現することができる．
 その結果，SystemはLow Latencyとなる．
 
-=== Kernel-Level Stack <kernel_stack>
+=== Kernel-Level Stack <a9n::kernel_stack>
 
 A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．
 従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．
@@ -198,7 +198,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 #pagebreak()
 
-=== Capability Callの略式表記
+=== Capability Callの略式表記 <a9n::capability_call::abbreviation>
 
 本文書では各CapabilityごとのCapability Callを略式表記する．
 通常，Capability Call全てに共通な引数は以下のようになる：
@@ -224,7 +224,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 #pagebreak()
 
-=== Capability Node <capability_node>
+=== Capability Node <a9n::capability_node>
 
 Capability NodeはCapabilityを格納するためのCapabilityであり，seL4 MicrokernelにおけるCNodeの設計をベースとしている．
 1つのNodeは$2^"RadixBits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．
@@ -241,7 +241,7 @@ Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，こ
 
 ==== `capability_node::traverse_slot`#footnote()[`capability_component::traverse_slot`の実装]
 `traverse_slot`Node間の再帰的な探索であり，以下のように実装される:
-+ Capability DescirptorからDescriptor Used Bits分をSkipした箇所からNodeのRadix Bits分を取り出し (@calculate_capability_index) ，Node Indexとする．
++ Capability DescirptorからDescriptor Used Bits分をSkipした箇所からNodeのRadix Bits分を取り出し (@a9n::capability_node::calculate_capability_index) ，Node Indexとする．
 + Node Indexを用いてSlotを取得し，次の探査対象とする．
 + 3で取得したSlotからCapability Componentを取得し，再帰的に`taverse_slot`を呼び出す．
 
@@ -265,14 +265,14 @@ inline const a9n::word capability_node::calculate_capability_index(
 }
     ```,
     caption: "Node Indexの取得",
-) <calculate_capability_index>
+) <a9n::capability_node::calculate_capability_index>
 
 Node以外のCapability Component実装は，`retrieve_slot`や`traverse_slot`の呼び出し時に`capability_lookup_error::TERMINAL`を返す．この機構により，どのCapability Componentを呼び出すかに関わらずCapability Nodeの探索を行うことができる．
 
-==== Addressing <capability_node::addressing>
+==== Addressing <a9n::capability_node::addressing>
 
 Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．
-Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@capability_descriptor)，Capability Nodeの探索上限を示す．
+Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@a9n::capability_descriptor)，Capability Nodeの探索上限を示す．
 
 #figure(
     bytefield(
@@ -291,7 +291,7 @@ Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@ca
         text-size: 4pt,
     ),
     caption: [Userが指定するCapability Descriptorの構造#footnote()[簡略化のために64bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]],
-) <capability_descriptor>
+) <a9n::capability_descriptor>
 
 Addressing機構は先述したようにRadix Page Tableをベースとしているが，具体例を示すことで理解の助けとする．
 
@@ -311,7 +311,7 @@ $ log_2(64) = 6 $
 そして，$"Node"_0$のIndex : $"0x02"$に$"Node"_1$を格納し，$"Node"_1$のIndex : $"0x03"$に$"Node"_2$を格納する．
 また，$"Node"_2$のIndex : $"0x04"$にNodeではない終端のCapabilityとして$"Capability"_"Target"$を格納する．
 
-これを図示すると (@capability_node_example) になる．
+これを図示すると (@a9n::capability_node::example) になる．
 
 #figure([
     #cetz.canvas({
@@ -399,9 +399,9 @@ $ log_2(64) = 6 $
     })
     ],
     caption: "Capability構成の例"
-) <capability_node_example>
+) <a9n::capability_node::example>
 
-ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは (@capability_target_descriptor) のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
+ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは (@a9n::capability_node::example::target_descriptor) のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
 
 //   0001 1000 = 0x24 (depth)
 //   0000 0011 = 0x02 (node_0)
@@ -410,10 +410,10 @@ $ log_2(64) = 6 $
 #text()[$
     "capability_descriptor"        &:= &"0x"&"180300C5" &("hex") \ 
                         &:= &"0b"&"00011000000000110000000011000101" &("bin")
-$] <capability_target_descriptor>
+$] <a9n::capability_node::example::target_descriptor>
 // 00011000'00000011'00000000'11000101
 
-これをNodeのRadix Bitsによってパースすると，(@parsed_capability_target_descriptor) となる:
+これをNodeのRadix Bitsによってパースすると，(@a9n::capability_node::example::parsed_capability_target_descriptor) となる:
 
 $
     0b
@@ -421,22 +421,22 @@ $
     overbracket(underbracket(00000011, "Index"_("Node"_0)), "8bit")
     overbracket(underbracket(0000000011, "Index"_("Node"_1)), "10bit")
     overbracket(underbracket(000101, "Index"_("Node"_2)), "6bit")
-$ <parsed_capability_target_descriptor>
+$ <a9n::capability_node::example::parsed_capability_target_descriptor>
 
 まず，先頭8bitからDepth Bitsが取り出される．この場合は$"0b00011000" = "0x24"$となる．
 Depth Bitsの妥当性を示すため，実際に計算を行う．
 
-$"Capability"_"Target"$に対応するDepth Bitsは (@capability_target_calculated_depth)のように計算される：
+$"Capability"_"Target"$に対応するDepth Bitsは (@a9n::capability_node::example::capability_target_calculated_depth)のように計算される：
 
 $
     "Depth"("Capability"_"Target") &= "Radix"("Node"_0) + "Radix"("Node"_1) + "Radix"("Node"_2) \ 
     &= 8 + 10 + 6 = 24
-$ <capability_target_calculated_depth>
+$ <a9n::capability_node::example::capability_target_calculated_depth>
 
-ただし，$"Capability"_"Target"$のように終端まで探索を行う場合，Depth Bitsはその最大値を用いることができる (@capability_max_depth)：
+ただし，$"Capability"_"Target"$のように終端まで探索を行う場合，Depth Bitsはその最大値を用いることができる (@a9n::capability_node::example::capability_max_depth)：
 $
     "Depth"_"Max" = "WordWidth" - 8
-$ <capability_max_depth>
+$ <a9n::capability_node::example::capability_max_depth>
 
 続いて，$"Node"_0$を探索するためのIndexを取得する．$"Node"_0$のRadix Bitsより8bitを取り出し，取得した$"0x02"$を$"Index"_("Node"_0)$とする．
 これを用いて$"Node"_0$から$"Node"_1$を得る．
@@ -447,29 +447,29 @@ $ <capability_max_depth>
 最後に，$"Node_2"$を探索するためのIndexを取得する．$"Node_2"$のRadix Bitsより8bitを取り出し，取得した$"0x04"$を$"Index"_("Node_2")$とする．
 これにより，最終的な$"Capability"_"Target"$が取得される．
 
-次の例として，$"Node"_1$を対象にCapability Callを実行したい場合を考えると，Capability Descriptorは (@capability_node_1_descriptor) のようになる:
+次の例として，$"Node"_1$を対象にCapability Callを実行したい場合を考えると，Capability Descriptorは (@a9n::capability_node::example::capability_node_1_descriptor) のようになる:
 
 #text()[$
     "capability_descriptor"        &:= &"0x"&"803xxxx" &("hex") \ 
                         &:= &"0b"&"0000100000000011 xxxxxxxxxxxxxxxx" &("bin")
-$] <capability_node_1_descriptor>
+$] <a9n::capability_node::example::capability_node_1_descriptor>
 
-これをNodeのRadix Bitsによってパースすると，(@parsed_node_1_descriptor) となる:
+これをNodeのRadix Bitsによってパースすると，(@a9n::capability_node::example::parsed_node_1_descriptor) となる:
 
 $
     0b
     overbracket(underbracket(00001000, "Depth"), "8bit")
     overbracket(underbracket(00000011, "Index"_("Node"_0)), "8bit")
     overbracket(underbracket("XXXXXXXXXXXXXXXX", "Unused"), "Remain Bits")
-$ <parsed_node_1_descriptor>
+$ <a9n::capability_node::example::parsed_node_1_descriptor>
 
 これも同様にDepth Bitsの妥当性を検証する．
-この場合，Depth Bitsは (@capability_node_1_depth)のように計算される：
+この場合，Depth Bitsは (@a9n::capability_node::example::capability_node_1_depth)のように計算される：
 
 $
     "Depth"("Capability"_"Target") &= "Radix"("Node"_0) \ 
     &= 8
-$ <capability_node_1_depth>
+$ <a9n::capability_node::example::capability_node_1_depth>
 
 Depth BitsはNodeのような非終端のCapabilityを指定するために使用される．常に最大値を使用した場合，必ず終端まで探索されてしまうためである．
 $"Capability"_"Target"$の探索と途中までは同様であるが，パース済みのDescriptorがDepth Bits以上になった時点で探索を終了する．
@@ -486,7 +486,7 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
         "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
     ),
     caption: "capability_node::copy",
-) <capability_node_copy>
+) <a9n::capability_node::copy>
 
 #technical_term(name: `move`)[CapabilityのMoveを実行する．RightsはそのままMoveされる．]
 
@@ -495,7 +495,7 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
     "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
     "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
     "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
-)
+) <a9n::capability_node::move>
 
 #technical_term(name: `mint`)[CapabilityのMintを実行する．新しいRightsは元となるRightsのSubsetである必要がある．]
 
@@ -504,35 +504,35 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
     "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
     "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
     "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
-    "capability_rights", "new_rights", "新しいRights",
-)
+    "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+) <a9n::capability_node::mint>
 
 #technical_term(name: `demote`)[Capability Rightsを不可逆的に降格する．新しいRightsは元となるRightsのSubsetである必要がある．]
 
 #api_table(
     "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
     "word", "target_index", "対象のCapabilityを格納しているNode内Index",
-    "capability_rights", "new_rights", "新しいRights",
-)
+    "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+) <a9n::capability_node::demote>
 
 #technical_term(name: `remove`)[CapabilityをSlotから削除する．Dependency Nodeに兄弟が存在しない場合，Revokeを実行してから削除する．]
 
 #api_table(
     "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
     "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
-)
+) <a9n::capability_node::remove>
 
 #technical_term(name: `revoke`)[Capabilityを初期化/無効化する．]
 
 #api_table(
     "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
     "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
-)
+) <a9n::capability_node::revoke>
 
 
 #pagebreak()
 
-=== Generic Capability
+=== Generic Capability <a9n::generic>
 
 Generic Capabilityは物理的なMemoryを抽象化したCapabilityである．
 GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsから構成される．
@@ -1114,10 +1114,10 @@ Kernel-LevelのPIDやTIDが存在しない場合，IPC Messageのある領域を
 これを解決するのがIdentifierであり，User-Levelにおける柔軟かつSecureなContextの識別を実現する．
 
 IPC Portに対するIdentify操作により，Word型の値をIPC Port(が格納されているSlot)に設定できる．
-この値はSlot Local Data (@slot_local_data) に格納されるため，同じIPC Portを共有するContextごとに設定可能#footnote[実際にはSlot Levelで設定可能なため，各ContextがIdentifierを複数個持つこともできる．]である．
+この値はSlot Local Data (@a9n::slot_local_data) に格納されるため，同じIPC Portを共有するContextごとに設定可能#footnote[実際にはSlot Levelで設定可能なため，各ContextがIdentifierを複数個持つこともできる．]である．
 そして，この値はIPCの各操作ごとにKernelの手で転送される．
 
-あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights (@capability_rights) からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
+あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights (@a9n::capability_rights) からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
 
 ==== Capability Transfer <ipc_port::capability_transfer>
 
@@ -1126,7 +1126,7 @@ A9N MicrokernelはIPCを通じてCapabilityを転送 (Copy) できる．
 - 送信者はIPC BufferのTransfer Source Descriptors Fieldに転送したいCapability Descriptorを設定する．転送の成功時，このFieldは0にリセットされる．
 - 受信者はIPC BufferのTransfer Destination Node Fieldに転送されたCapabilityを格納するNodeへのCapability Descriptorを設定し，またTransfer Destination Index Fieldに格納先NodeのIndex (Offset) を設定する．
 
-Capability Transferは必ずIPC Bufferを介して行われるため，Virtual Message Register (@virtual_message_register) におけるHardware Registerが使用されない．したがって，Hardware Registerに格納可能なMessageのみで完結するIPCよりもやや低速である．
+Capability Transferは必ずIPC Bufferを介して行われるため，Virtual Message Register (@a9n::virtual_message_register) におけるHardware Registerが使用されない．したがって，Hardware Registerに格納可能なMessageのみで完結するIPCよりもやや低速である．
 
 ==== Data Structure
 
@@ -1555,27 +1555,32 @@ TODO
 
 #pagebreak()
 
-=== ABI
+=== ABI <a9n::abi>
+
+A9N MicrokernelのHALはArchitectureごとにKernel ABIを定義する．
+ここでいうABIは主にVirtual Message RegisterにおけるHardware RegisterのMappingを指す．
+
+==== x86_64 <a9n::abi::x86_64>
 
 #pagebreak()
 
-=== Boot Protocol
+=== Boot Protocol <boot_protocol>
 
 #pagebreak()
 
-=== Init Protocol
+=== Init Protocol <init_protocol>
 
 #pagebreak()
 
 == Nun Operating System Frameworkの開発
 
-=== Build System 
+=== Build System <nun::build_system>
 
-=== HAL
+=== HAL <nun::hal>
 
-=== Entry Point
+=== Entry Point <nun::entry_point>
 
-=== API
+=== API <nun::api>
 
 /* ===== KOITO ===== */
 
