@@ -694,25 +694,25 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 #technical_term(name: `map`)[Page TableやFrameをVirtual Address SpaceにMapする．]
 
 #api_table(
-    "capability_descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor",
-    "capability_descriptor", "target_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
-    "virtual_address", "address", "Mapする仮想アドレス",
+    "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
+    "capability_descriptor", "memory_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
+    "virtual_address", "address", "MapするVirtual Address",
     "memory_attribute", "attribute", "Mapに使用する属性",
 )
 
 #technical_term(name: `unmap`)[Page TableやFrameをVirtual Address SpaceからUnmapする．]
 
 #api_table(
-    "capability_descriptor", "page_table_descriptor", "対象Address SpaceへのDescriptor",
-    "capability_descriptor", "target_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
-    "virtual_address", "address", "Unmapする仮想アドレス",
+    "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
+    "capability_descriptor", "memory_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
+    "virtual_address", "address", "UnmapするVirtual Address",
 )
 
-#technical_term(name: `get_unset_depth`)[Address Spaceに仮想アドレスをMapするうえで，まだMapされていないPage TableのDepthを取得する．]
+#technical_term(name: `get_unset_depth`)[Address SpaceにVirtual AddressをMapするうえで，まだMapされていないPage TableのDepthを取得する．]
 
 #figure(
     api_table(
-        "capability_descriptor", "memory_descriptor", "対象Address SpaceへのDescriptor"
+        "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor"
     ),
     caption: [`get_unset_depth`の引数]
 )
@@ -1571,19 +1571,168 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
 
 === Virtual CPU Capability
 
-TODO
+Virtual CPU CapabilityはVirtualizationの根幹をなすCapabilityである．
+Virtual MachineはVirtual CPU上で動作する．したがって，Virtual CPUの状態を操作することでUser-LevelのVirtual Machine Monitorを実装する．
+
+Virtual CPUにはCapability CallとしてEnter操作が定義される．あるContextがEnterを実行するとそのContextはVirtual CPUにBindされScheduleされる．
+
+==== Virtual CPU State Descriptor
+
+Virtual CPUはExit Reasonの発生時にVirtual CPUにEnterしているContextへ制御を返す．
+ここでVirtual CPUの状態を更新し，再び実行を開始することを考える．当然ながら状態を取得する必要があり，また書き込める必要がある．
+ここで一度制御が返されるたびにGet Stateのような操作を実行し，その後Set Stateのような操作を実行していては非効率である．
+このコストを削減するために毎回すべての状ad態を転送する手法も考えられるが，これも不要なCopyを伴うため非効率である．
+
+そこでVirtual CPU State Descriptorを導入する．このDescriptorは転送するStateを選択するためのBit Flagであり，Virtual CPUのExit Reasonごとに設定可能である．
+
+==== Virtual IRQ
+
+Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQはVirtual Machine中で実際のIRQとして扱われる．
+使用例として，例えば定期的にVirtual IRQをInjectすることでClock InterruptをEmulateすることができる
+また，他のDevice Driverのような割り込みを使用する機構もEmulateできる．
+
+==== Capability Call
+
+現在正式に実装されているわけではなく，仕様のみが定義されている．
+
+#technical_term(name: `enter`)[
+    Virtual CPUとContextをBindし，Virtual Machineの実行を開始する．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+)
+
+#technical_term(name: `exit`)[
+    実行中のVirtual Machineを外部から中断し制御を返す．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+)
+
+#technical_term(name: `read_state`)[
+    Virtual CPUの状態を取得する．
+]
+
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+        "word", "state_descriptor", "読み出すFieldを示すState Descriptor",
+    ),
+    caption: [`read_state`の引数]
+)
+
+#figure(
+    api_table(
+        "word[n]", "fields", "読み出したFieldの値",
+    ),
+    caption: [`reas_state`の返り値]
+)
+
+
+#technical_term(name: `write_state`)[
+    Virtual CPUの状態を書き込む．
+]
+
+#api_table(
+    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+    "word", "state_descriptor", "書き込むFieldを示すState Descriptor",
+    "word[n]", "fields", "書き込むFIeldの値",
+)
+
+#technical_term(name: `inject_irq`)[
+    Virtual IRQをInjectする．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    "word", "irq_number", "InjectするIRQ Number",
+)
+
+
+#technical_term(name: `configure_address_space`)[
+    Virtual CPUのAddress Spaceを設定する．このAddress SpaceはHostとGuestのPhysical Address SpaceをMappingする．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    "capability_descriptor", "virtual_address_space", "BindするVirtual Address SpaceへのDescriptor",
+)
+
+#technical_term(name: `configure_state_descriptor`)[
+    Virtual CPU State Descriptorを設定する．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    "word", "exit_reason", "State Descriptorを設定するExit Reason",
+    "word", "target_state_descriptor", "Exit ReasonにLinkさせるState Descriptor",
+)
+
+#technical_term(name: `inject_irq`)[
+    Virtual IRQをInjectする．
+]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    "word", "irq_number", "InjectするIRQ Number",
+)
 
 #pagebreak()
 
 === Virtual Address Space Capability
 
-TODO
+Virtual Address Space CapabilityはVirtual CPUのPhysical Address Spaceを抽象化するCapabilityである．
+このCapabilityはHost Physical Address (HPA) とGuest Physical Address (GPA) のMappingを行う．したがって，Guest Virtual AddressはVirtual CPU上のGuest自身が設定する．
+
+==== Capability Call
+
+現在正式に実装されているわけではなく，仕様のみが定義されている．
+
+#technical_term(name: `map`)[Virtual Page TableやFrameをGuest Physical Address SpaceにMapする．]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
+    "capability_descriptor", "memory_descriptor", [対象にMapするVirtual Page Table \ もしくはFrameへのDescriptor],
+    "virtual_address", "address", "MapするPhysical Address",
+    "memory_attribute", "attribute", "Mapに使用する属性",
+)
+
+#technical_term(name: `unmap`)[Virtual Page TableやFrameをGuest Physical Address SpaceからUnmapする．]
+
+#api_table(
+    "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
+    "capability_descriptor", "memory_descriptor", [対象からUnmapするVirtual Page Table \ もしくはFrameへのDescriptor],
+    "virtual_address", "address", "UnmapするPhysical Address",
+)
+
+#technical_term(name: `get_unset_depth`)[Virtual Address SpaceにPhysical AddressをMapするうえで，まだMapされていないVirtual Page TableのDepthを取得する．]
+
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor"
+    ),
+    caption: [`get_unset_depth`の引数]
+)
+
+#figure(
+    api_table(
+        "word", "depth", "MapされていないVirtual Page TableのDepth"
+    ),
+    caption: [`get_unset_depth`の返り値]
+)
 
 #pagebreak()
 
 === Virtual Page Table Capability
 
-TODO
+Page Tableとは異なり，Virtual Address SpaceにおけるHost Physical AddressとGuest Physical AddressのMappingを行う．
+それ以外はPage Tableと同等の構造を持つ．
+
+==== Capability Call
+
+現時点でVirtual Page Table CapabilityにCapability Callは存在しないが，将来的にそれ自体のDepthを確認するための`get_depth`が追加される予定である．
 
 #pagebreak()
 

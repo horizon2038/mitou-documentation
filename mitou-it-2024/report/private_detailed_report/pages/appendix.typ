@@ -14,7 +14,7 @@
 #technical_term(name: [Policy/Mechanism Separation @LevinEtAl:1975])[機構と方針の分離．ある機構(Mechanism)が提供する機能を，それを利用する方針(Policy)から分離することで，方針の変更を容易にする．]
 #technical_term(name: "Linux")[Linus Torvaldsによって開発されたMonolithic Kernel．]
 #technical_term(name: "L4")[Jochen Liedtkeによって開発された，高速なIPC性能を持つ2nd-Generation Microkernel．]
-#technical_term(name: "seL4")[Trustworthy Systemsによって開発された3rd-Generation Capability-Based Microkernel．]
+#technical_term(name: "seL4")[NICTAのTrustworthy Systemsによって開発された3rd-Generation Capability-Based Microkernel．]
 #technical_term(name: "Fiasco.OC")[L4系列の3rd-Generation Capability-Based Microkernel．]
 #technical_term(name: "Zircon")[Googleによって開発された3rd-Generation Microkernel．]
 #technical_term(name: "UEFI")[Unified Extensible Firmware Interfaceの略称であり，OSとPlatform間のInterfaceを定義する規格．]
@@ -53,29 +53,25 @@ fn main(init_info: &nun::InitInfo) {
 
 #pagebreak()
 
-=== `liba9n::result<T, E>`を用いたMethod ChainによるError Handling <liba9n::result::example>
+=== `liba9n::result<T, E>`を用いたMethod Chain <liba9n::result::example>
 
 ==== `src/kernel/process/process_manager.cpp`
 
 #block()[
 ```cpp 
-kernel_result process_manager::try_schedule_and_switch(void)
+kernel_result process_manager::switch_to_idle(void)
 {
-    kernel_result process_manager::switch_to_idle(void)
-    {
-        return a9n::hal::current_local_variable()
-            .transform_error(convert_hal_to_kernel_error)
-            .and_then(
-                [&](cpu_local_variable *local_variable) -> kernel_result
-                {
-                    local_variable->current_process = &idle_process;
-                    local_variable->is_idle         = true;
+    return a9n::hal::current_local_variable()
+        .transform_error(convert_hal_to_kernel_error)
+        .and_then(
+            [&](cpu_local_variable *local_variable) -> kernel_result
+            {
+                local_variable->current_process = &idle_process;
+                local_variable->is_idle         = true;
 
-                    return {};
-                }
-            );
-    }
-
+                return {};
+            }
+        );
 }
 ```
 ]
