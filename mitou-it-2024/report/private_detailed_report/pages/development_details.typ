@@ -11,8 +11,6 @@
 
 == A9N Microkernelの開発
 
-=== History of A9N Microkernel
-
 === Basic Types <a9n::basic_types>
 
 A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．
