@@ -571,7 +571,7 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
     "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
 ) <a9n::capability_node::remove>
 
-#technical_term(name: `revoke`)[Capabilityを初期化/無効化する．]
+#technical_term(name: `revoke`)[Capabilityを初期化/無効化する．] 
 
 #api_table(
     "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
@@ -595,7 +595,7 @@ Generic CapabilityはすべてのCapabilityを生成するためのFactoryとし
 Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
 生成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
 
-==== $log_2$ Based Allocation
+==== $log_2$ Based Allocation <a9n::generic::log2_based_allocation>
 
 GenericのConvert操作時，次のステップでCapabilityを生成する：
 
@@ -638,7 +638,7 @@ Specific Bitsが必要となる理由は，Specific Bitsによって全体とし
 
 このように，すべてのCapabilityはAllocate時にAlignされる．そのため，Genericを適切に分割してからCapabilityをConvertすることで自然と*SLAB Allocator*のような振る舞いを実現する#footnote[あるCapabilityのConvertによってAlignが発生すると，次の同一CapabilityをConvertする際に隙間なくAllocateできるため．]．
 
-==== Deallocation
+==== Deallocation <a9n::generic::deallocation>
 
 Genericの再利用には，ConvertされたすべてのCapabilityをRemoveする必要がある．
 これはGenericに対してRevokeを実行することで再帰的に行われる．
@@ -1913,7 +1913,7 @@ Source CodeにおけるArchitecture-Dependentな部分のBuildは`src/hal/{arch}
 
 #pagebreak()
 
-== Nun Operating System Frameworkの開発
+== Nun Operating System Frameworkの開発 <nun>
 
 A9N MicrokernelをコアとするOSを構築するためには，A9N Init Protocol (cf., @a9n::init_protocol) で示したProtocolに従ってInit Serverを構築する必要がある．
 これを容易かつSecureに実現するため，Rustを用いてOSを構築可能なNun Operating System Frameworkを開発した．
@@ -1986,7 +1986,7 @@ Nunを用いたOSのBuildには，Nunに統合されたCargoによるBuild Syste
 NunにはBuild対象とするArchitecture用のCustom Targetが用意される．したがって，`cargo build --target {arch}-unknown-a9n`#footnote[正確には\ `cargo build --target Nun/arch/{arch}-unknown-a9n.json -Z build-std-features=compiler-builtins-mem --release
 `]によりBuildが可能となる．
 Custom TargetによってLinker ScriptやArchitecture-DependentなBuild Optionが自動的に適用される．
-現在，Targetとしてx86_64がサポートされている．
+現在，Targetとしてx86_64がSupportされている．
 
 ==== x86_64
 
@@ -2029,7 +2029,46 @@ x86_64におけるCustom Targetは以下のように定義される (cf., @nun::
 
 === Entry Point <nun::entry_point>
 
-=== API <nun::api>
+NunはRustのStandard LibraryやStartup Runtimeを提供するものではない．
+そのため，Startupに必要なArchitecture-Dependentな処理とArchitecture-Independentな処理を適切に分配しつつEntry Pointを定義する機構を実装した．
+
+`nun::entry!`はRustにおける宣言的Macroであり，() のように使用することでUser-DefinedなEntry Pointを指定できる．
+
+#figure(
+    ```rust
+    // <Entry Point>はメタ構文変数であり，実際には`main`などの関数名が入る
+    nun::entry!(<Entry Point>);
+
+    <Entry Point>(init_info: &nun::InitInfo) {
+        // nun::entry!によって指定されたEntry Pointにはinit_infoが渡される
+    }
+    ```,
+    caption: "User-Defined Entry Point"
+)
+
+これは以下 (cf., @nun::entry_point::sequence) に示すFlowで処理を実現する．
+
+#figure(
+    diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (2em, 1em),
+        node-inset: 1em,
+
+        // draw nodes
+        node((0, 0),  [Startup], name: <startup>, shape: circle, extrude: (-3, 0), fill: luma(240)),
+        node((1, 0),  [`nun::arch::arch_entry`], name: <arch_entry>, fill: luma(240)),
+        node((2, 0),  [`nun::entry`], name: <entry>),
+        node((3, 0),  [User-Defined Entry Point], name: <user-defined>),
+
+        edge(<startup>, <arch_entry>, "-|>", label-side: center),
+        edge(<arch_entry>, <entry>, "-|>", label-side: center),
+        edge(<entry>, <user-defined>, "-|>", label-side: center),
+    ),
+    caption: "Startup Sequence"
+) <nun::entry_point::sequence>
 
 === Code Exapmle <nun::code_example>
 
@@ -2041,13 +2080,202 @@ Nunを用いた最小なOSのコード例を付録に収録している（@nun::
 
 == KOITOの開発
 
-=== Standard C Library
+KOITOはNun (cf., @nun) を用いて開発されたA9N MicrokernelをコアとするOSである．Rustを用いてModernかつSecureに開発されている．
+実態としては下図 (cf., @koito::architecture)で示すような，User-Levelで動作するServer群を1つとして捉えたものである．
 
-// CMake Integration
+#figure(
+    diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (2em, 2em),
+        node-inset: 1em,
 
-=== Memory Management Server
+        // draw nodes
+        node((0, 0),  [Application], name: <application>),
+        node((0, 1),  [KOITO Server], name: <koito_server>),
+        node((-1, 1),  [POSIX Server], name: <posix_server>),
+        node((1, 1),  [ULMM Server], name: <ulmm_server>),
+        node((0, 2), [Nun], name: <nun>),
+        node(
+            enclose: (
+                <koito_server>,
+                <posix_server>,
+                <ulmm_server>,
+                <nun>
+            ),
+            name: <koito>
+        ),
+        node(
+            enclose: (
+                <application>,
+                <koito_server>,
+                <posix_server>,
+                <ulmm_server>,
+                <nun>
+            ),
+            name: <user>,
+            inset: 2em
+        ),
 
-=== POSIX Server
+        node((0, 4), [A9N Microkernel], name: <a9n>),
+
+        edge(<application>, <koito_server>, "<-|>", label-side: center),
+        edge(<application>, <posix_server>, "<-|>", label-side: center),
+        edge(<application>, <ulmm_server>, "<-|>", label-side: center),
+        edge(<koito_server>, <posix_server>, "<|-|>", label-side: center),
+        edge(<koito_server>, <ulmm_server>, "<|-|>", label-side: center),
+        edge(<koito_server>, <nun>, "-", label-side: center),
+
+        edge(<koito>, <a9n>, "-|>", [Kernel Call], label-side: center),
+    ),
+    caption: "KOITO Architecture"
+) <koito::architecture>
+
+==== ACI
+
+KOITOはUser ApplicationとのInterfaceとしてACI (Application Capability Interface) を定義する．
+実行可能なContextごとにNodeの使用方法を定義することで，それぞれのUser Applicationについて共通の処理を実現する．
+現在のVersionにおけるACIは以下のように定義される (cf., @koito::aci)：
+
+#figure(
+    ```rust
+    #[repr(usize)]
+    pub enum SlotOffset {
+        // 0 is reserved : to prevent wrong specification by null descriptor
+        Reserved = 0,
+        RootNode = 1,
+        ProcessControlBlock = 2,
+        AddressSpace = 3,
+        BufferFrame = 4,
+        PageTables = 5,
+        Frames = 6,
+        OSPort = 7,
+        Node = 8, // user-defined!
+    }
+    ```,
+    caption: "KOITOの定義するACI"
+) <koito::aci>
+
+このうち，特に注目すべきはOSPortである．
+Processの作成時，Root NodeのOffset: OSPortにはKOITO Serverと通信を行うためのIPC Portが格納され，Indentifier (cf., @a9n::ipc_port::identifier) としてProcess固有の値が設定される． これはPIDとしてKOITO Serverによって使用される．
+
+このOSPortを切り変え宛先を変更することで，本質的にOSそのものを切り替えることが可能となる．したがって，KOITO Serverをもう一つ実行し隔離された状態で動作させることも可能である．
+他の活用例として，本来の通信先であるKOITO Serverの間に介在するようなProxy Serverを実装し，完全にUser-LevelでOS-Level System Callを監視することも可能である．
+
+=== KOITO Server 
+
+KOITO Serverは所謂Init Serverであり，A9N Microkernelによって直接起動される．
+このServerはPOSIX ServerとULMM Server，そして幾つかのDevice Driver Severを起動し，その後KOITO Shellを起動する．
+
+KOITO ShellはOSとして最初の動作を決定するために使用される．通常ここからPOSIX Serverを用いてUser Applicationを実行するが，実験的機構をTestするためのDebug Consoleの役割も果たす．
+
+=== User-Level Memory Management Server <koito::ulmm_server>
+
+KOITOはA9N Microkernelの提供するCapabilityを用いることで，SecureにUser-Level Memory Managementを実現する．
+その根幹をなすのがULMM Serverである．起動時，KOITO ServerはほぼすべてのGenericをULMM Serverに委譲する．
+ULMM ServerそれらGenericのConvert Policyを決定し，それに従ってMemory Allocationを行う．
+
+IPCによってMemory Allocation Requestを受け取ると，ULMM ServerはConvert Policyに従いGenericをConvertし，生成したCapabilityのTransferを実行する (cf., @a9n::ipc_port::capability_transfer)．
+
+==== SLAB Allocator
+
+ULMM ServerはRequestによりSLABとしてKernel Object用のGenericをBuddy Allocator (cf., @koito::ulmm::buddy) からAllocateする．言い換えると，Kernel Objectごとに分割されたGenericをAllocateする．
+これにより，Genericの特性を用いて(cf., @a9n::generic::log2_based_allocation) 半自動的にSLAB Allocatorが実装される．
+
+// TODO: いい感じの図を入れる
+
+==== Buddy Allocator <koito::ulmm::buddy>
+
+ULMM ServerはBuddy Systemを用いたBuddy AllocatorをUser-Levelで実装する．
+Buddy Allocatorは2の累乗をベースとし，領域を再帰的に2分割していくことでFragmentationを抑えつつAllocationを実行するアルゴリズムである．
+
+KOITOでは，Capabilityを用いてGenericを$1/2$サイズの子Genericへ再帰的に分割していくことで実装される．
+ここで重要なのは，そのGenericを必ず再利用の単位として扱うことである．A9N Microkernelにおいて，Genericの再利用を行うにはそこから派生したCapabilityをすべて削除する必要がある (cf., @a9n::generic::deallocation)．
+そのため，割り当てる単位としてCapabilityとGenericのSizeを1:1で対応させることにより，Genericの結合処理を上位のGenericに対するRevoke操作と同等とする．
+
+// TODO: いい感じの図を入れる
+
+=== POSIX Server <koito::posix_server>
+
+KOITOは限定的であるがPOSIX APIを提供するためのPOSIX Serverを実装する．
+POSIX Serverは基本的に`koito-libc`からのSystem Call Requestを受け取り，それに対応する操作を実行するものである (cf., @koito::posix_server::sequence)．
+
+#figure(
+    diagram(
+        // initialize
+        node-stroke: 0.1em,
+        // node-fill: luma(240),
+        // node-corner-radius: 0.25em,
+        spacing: (2em, 2em),
+        node-inset: 1em,
+
+        // draw nodes
+        node((0, 0),  [Application], name: <application>),
+        node((0, 1),  [`koito-libc`], name: <koito_libc>),
+        edge(<application>, <koito_libc>, "-", [Statically Linked], label-side: center),
+
+        node((0, 3), [POSIX Server], name: <posix_server>),
+        node((2, 3), [Other Servers], name: <other_servers>),
+        edge(<koito_libc>, <posix_server>, "<|-|>", [User-Level System Call], label-side: center),
+        edge(<posix_server>, <other_servers>, "<|-|>", [IPC], label-side: center),
+    ),
+    caption: "POSIX Serverの略式Architecture"
+) <koito::posix_server::sequence>
+
+POSIX ServerはProcess ManagementやMemory Management Frontend#footnote[BackendはULMM Serverである．]，及び標準入出力などの機構を提供する．
+必ずPOSIX ServerのみでRequestを完結させるわけではなく，必要に応じて他のServerへ処理が委譲される．
+
+現在，このPOSIX Serverには以下のSystem Callが定義されている (cf., @koito::posix_server::syscalls)：
+
+#figure(
+    ```rust
+    // same as linux syscall number for convenience
+    #[repr(usize)]
+    pub enum Syscall {
+        Read = 0,
+        Write = 1,
+        Open = 2,
+        Close = 3,
+        Stat = 4,
+        Fstat = 5,
+        Lseek = 8,
+        Brk = 12,
+        Getpid = 39,
+        Fork = 57,
+        Execve = 59,
+        Exit = 60,
+        Wait = 61,
+        Kill = 62,
+        Link = 86,
+        Unlink = 87,
+        Times = 100,
+    }
+    ```,
+    caption: "POSIX ServerのSystem Call Request定義"
+) <koito::posix_server::syscalls>
+
+==== Standard C Library <koito::libc>
+
+KOITOはStandard C LibraryとしてKOITO libcを提供しているが，現状におけるKOITO libcのベースとなるのはNewlibである．
+NewlibはPortableなStandard C Libraryであり，Sytem Callの呼び出し部分をA9NとKOITOにおけるIPC Callに置き換えることで機能要件を達成する．
+
+NewlibはMakefileとAutoconfによってBuildされるが，これをModernizeしCMake Integrationを行った．
+この機構はOSに依存しないため，KOITOではない他のSystemに適用したい場合も使用可能である．
+Portingに必要なものを以下に示す：
+
+#technical_term(name: `crt0`)[
+    C Runtime．通常，Stack PointerやEnvironment Pointerを初期化し，引数を設定してから`main`へJumpするために使用される．
+]
+
+#technical_term(name: `linker.ld`)[
+    User ApplicationをC RuntimeとLinkするために必要なLinker Script．
+]
+
+#technical_term(name: `newlib_glue.c`)[
+    Newlibによって呼び出される，System CallをOS固有の呼び出しに変換するためのGlue Code．
+]
 
 #pagebreak()
 
@@ -2055,17 +2283,89 @@ Nunを用いた最小なOSのコード例を付録に収録している（@nun::
 
 == `liba9n`の開発
 
+通常，Kernelの開発においてはCやC++が選択される．しかし，これらの言語には安定性に欠かせないError Handling機構が不足している．
+まず，Cにおいては単なる整数をError型とし，値0を成功として扱うことが一般的である．この手法には問題があり，
+関数が事実上ただの整数型を返さなければならず，何らかの値が必要な場合にはPointerによる参照渡しを行う必要がある．というのも，`-1`をErrorとして扱う場合，仮に`-1`が正常値であったとしてもErrorとして判定されてしまうからである．
+
+では，Globalな`errno`を用いるのはどうだろうか？ これも考えてみればすぐに問題が見えてくる．
+MultiProcessor環境においてこの手法は危険である．したがって必ずLockが必要となるが，Lockの取得にはOverheadが存在するため，Performance-CriticalなKernelにおいては現実的でない．
+
+C++の例外機構を用いるのも，ことKernel Heapを排除したCapability-Based Microkernelにおいては適切でない．例外機構にはDynamicなMemory Allocationが必要であり，暗黙的にKernel Heapを要求する．また，失敗時のUnwinding にかかるコストも無視できない．
+
+そこで，昨今のModernな言語が備える機構を基礎とした，Freestanding C++20用のError Handling Libraryである`liba9n`を開発した．
+`liba9n`はStandard C++ Libraryに依存せず，またDynamicなMemory Allocationを必要としない．したがって，Kernel Heapを持たず，なおかつ最小化したいMicrokernelに適している．
+
 === `liba9n::std`
+
+`liba9n::std`は`libc++`のSubsetであり，Freestandingな環境のために再実装したものである．
+これには`liba9n::std::move`, `liba9n::std::forward`などの標準Utility関数や，`type_traits`といったMeta-Programming機構が含まれる．
+また，よく使用される`std::array`や，実験的なDynamic Memory Allocationを行わない`std::function`なども提供される．
 
 === `liba9n::option<T>`
 
+`liba9n::option<T>`は，型をOptionalとする ── つまり，共通の無効値を表現可能な型である．
+Haskellの`Maybe`やRustの`Option<T>`, Standard C++ Libraryの`std::optional<T>`に相当する．
+
+`liba9n::option<T>`はMonadic OperationをSupportする．そのため，逐次処理を抽象化した高度なError Handlingが可能である．
+以下のMember Methodが実装されている：
+
+#technical_term(name: `and_then`)[
+    値が存在する場合 (`None`でない場合) のみ`option<T>`の持つ値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(T) -> option<T>`のような形をとる.
+    値が存在しない場合は何も実行しない．
+]
+
+#technical_term(name: `or_else`)[
+    値が存在しない場合 (`None`の場合) のみCallbackの実行結果を返す．このとき，Callbackは`callback(void) -> option<T>`のような形をとる．
+    値が存在する場合は何も実行しない．
+]
+
+#technical_term(name: `transform`)[
+    値が存在する場合 (`None`でない場合) のみCallbackに渡し， 実行結果を`Option<U>`でWrapして返す．このとき, Callbackは`callback(T) -> U`のような形をとる．
+    値が存在しない場合は何も実行しない．
+]
+
 === `liba9n::result<T, E>`
+
+`liba9n::result<T, E>`は，型をResultとする ── つまり，成功時には成功値を，失敗時にはError値を表現可能な型であり，
+Haskellの`Either`やRustの`Result<T, E>`, Standard C++ Libraryの`std::variant<T, E>`もしくは`std::expected<T, E>`に相当する．
+
+この型は`T`と`E`が異なる型であることを要請する．類似のものと比較して柔軟度はやや低くなるが，関数からのReturn時に型を推論させ，Helper Functionを不要にすることができる．
+また，`liba9n::option<T>`と同様にMonadic OperationをSupportする．
 
 === Monadic Operation
 
+Tを`ok`とし，Eを`error`とする．
+
+#technical_term(name: `and_then`)[
+    値が存在する場合のみ`ok`の値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(T) -> Result<U, E>`のような形をとる．
+    値が存在しない場合は何も実行しない．
+]
+
+#technical_term(name: `or_else`)[
+    値が存在しない場合のみ`error`の値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(E) -> Result<T, F>`のような形をとる．
+    値が存在する場合は何も実行しない．
+]
+
+#technical_term(name: `transform`)[
+    値が存在する場合のみ`ok`の値をCallbackに渡し，実行結果を`Result<U, E>`でWrapして返す．このとき，Callbackは`callback(T) -> U`のような形をとる．
+    値が存在しない場合は何も実行しない．
+]
+
+#technical_term(name: `transform_error`)[
+    値が存在しない場合のみ`error`の値をCallbackに渡し，実行結果を`Result<T, F>`でWrapして返す．このとき，Callbackは`callback(E) -> F`のような形をとる．
+    値が存在する場合は何も実行しない．
+]
+
 === Conditionally Trivial Special Member Functions
 
+Kernel内部で使用する型は高速であることが要求される．そのため，`liba9n::option<T>`と`liba9n::result<T, E>`ではTrivial性をMember型から引き継ぐためにConditionally Trivial Special Member Functionsを用いる．
+Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが可能であると定められる @ItaniumCppAbi．これにより，Trivialな型に限定すれば高速に扱うことが可能となる．
+
 === `liba9n::not_null<T>`
+
+`liba9n::option<T>`や`liba9n::result<T, E>`には参照型を格納することができないが，Pointer型によって参照を扱うとNull Pointerを許容してしまう．
+型レベルで参照がNullでないことを保証するために`liba9n::not_null<T>`を実装した．
+この型は参照を値として保持するが，作成時に必ず参照を必要とする．したがって，ある程度の安全性を保証することができる．
 
 #pagebreak()
 
