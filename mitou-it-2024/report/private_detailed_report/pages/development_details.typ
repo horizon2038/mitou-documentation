@@ -2307,7 +2307,8 @@ C++の例外機構を用いるのも，ことKernel Heapを排除したCapabilit
 Haskellの`Maybe`やRustの`Option<T>`, Standard C++ Libraryの`std::optional<T>`に相当する．
 
 `liba9n::option<T>`はMonadic OperationをSupportする．そのため，逐次処理を抽象化した高度なError Handlingが可能である．
-以下のMember Methodが実装されている：
+
+==== Monadic Operation
 
 #technical_term(name: `and_then`)[
     値が存在する場合 (`None`でない場合) のみ`option<T>`の持つ値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(T) -> option<T>`のような形をとる.
@@ -2332,7 +2333,7 @@ Haskellの`Either`やRustの`Result<T, E>`, Standard C++ Libraryの`std::variant
 この型は`T`と`E`が異なる型であることを要請する．類似のものと比較して柔軟度はやや低くなるが，関数からのReturn時に型を推論させ，Helper Functionを不要にすることができる．
 また，`liba9n::option<T>`と同様にMonadic OperationをSupportする．
 
-=== Monadic Operation
+==== Monadic Operation
 
 Tを`ok`とし，Eを`error`とする．
 
@@ -2356,10 +2357,14 @@ Tを`ok`とし，Eを`error`とする．
     値が存在する場合は何も実行しない．
 ]
 
+これらのMonadic OperationはMethod Chainingによる高度な逐次処理とError Handlingを実現する．この例を付録に収録している（@liba9n::result::example）．
+
 === Conditionally Trivial Special Member Functions
 
-Kernel内部で使用する型は高速であることが要求される．そのため，`liba9n::option<T>`と`liba9n::result<T, E>`ではTrivial性をMember型から引き継ぐためにConditionally Trivial Special Member Functionsを用いる．
-Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが可能であると定められる @ItaniumCppAbi．これにより，Trivialな型に限定すれば高速に扱うことが可能となる．
+Kernel内部で使用する型は高速であることが要求される．そのため，可能な限りMemoryではなくRegisterを使用して値の受け渡しを実行したい．
+Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが可能であると定められる @ItaniumCppAbi．
+そのため，`liba9n::option<T>`と`liba9n::result<T, E>`ではTrivial性をMember型から引き継ぐためにConditionally Trivial Special Member Functions @P0848 を用いる．
+これにより，Trivialな型の場合は高速に扱うことが可能となる．
 
 === `liba9n::not_null<T>`
 
@@ -2373,8 +2378,11 @@ Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが�
 
 == A9NLoaderの開発
 
-=== Init ServerのLoad
-
-=== ELF Symbolの解決
+A9NLoaderはA9N-BasedなSystem (x86_64) を起動するための統合Bootloaderである．
+EDK2を用いて開発されており，UEFI環境で動作する．
+A9N Boot Protocol (cf., @a9n::boot_protocol) に従ってA9N MicrokernelとInit ServerをLoadし，その後Kernelに制御を移す．
 
 === CMake Integration
+
+EDK2は独自のBuild Systemを持つが，これはCMakeによってWrapされIntegrationされる．
+そのため，A9NLoaderのBuild Commandは`mkdir build && cmake -B build && cmake --build build`#footnote[Out-of-Source Build]のようにSimpleとなる．

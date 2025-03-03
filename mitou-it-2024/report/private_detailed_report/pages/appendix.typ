@@ -51,6 +51,35 @@ fn main(init_info: &nun::InitInfo) {
 }
 ```
 
+#pagebreak()
+
+=== `liba9n::result<T, E>`を用いたMethod ChainによるError Handling <liba9n::result::example>
+
+==== `src/kernel/process/process_manager.cpp`
+
+#block()[
+```cpp 
+kernel_result process_manager::try_schedule_and_switch(void)
+{
+    kernel_result process_manager::switch_to_idle(void)
+    {
+        return a9n::hal::current_local_variable()
+            .transform_error(convert_hal_to_kernel_error)
+            .and_then(
+                [&](cpu_local_variable *local_variable) -> kernel_result
+                {
+                    local_variable->current_process = &idle_process;
+                    local_variable->is_idle         = true;
+
+                    return {};
+                }
+            );
+    }
+
+}
+```
+]
+
 #show bibliography : set heading(level: 2)
 #pagebreak()
 #bibliography("/resources/references.bib", title: "参考文献")
