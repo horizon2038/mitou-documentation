@@ -1,3 +1,3 @@
 = 要約
 
-本プロジェクトでは，HALを備えたCapability-Based MicrokernelであるA9Nと，そのKernel上にOperating Systemを構築するためのFrameworkであるNun，そしてNunを用いて実装される, ユーザレベルでメモリ管理を実行するOperating SystemのKOITOを開発した．開発したMicrokernelのIPC性能は世界最速レベルを達成した．
+本プロジェクトでは，Hardware Abstraction Layerを備えたCapability-Based MicrokernelであるA9Nと，そのKernel上にOperating Systemを構築するためのFrameworkであるNun，そしてNunを用いて実装される, ユーザレベルでメモリ管理を実行するOperating SystemのKOITOを開発した．開発したMicrokernelのIPC性能は世界最速レベルを達成した．

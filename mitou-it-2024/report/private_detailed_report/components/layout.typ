@@ -34,7 +34,8 @@
     show heading.where(level: 1): it => {
         let current_chapter_number = counter(heading.where()).at(here()).first()
 
-        pagebreak(to: "odd", weak: true)
+        // pagebreak(to: "odd", weak: true)
+        pagebreak(weak: true)
         block(width:100%)[
             #set align(right)
             #set text(20pt, weight: "bold")

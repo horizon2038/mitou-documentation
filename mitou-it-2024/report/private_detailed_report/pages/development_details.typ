@@ -13,17 +13,10 @@
 
 === Basic Types <a9n::basic_types>
 
-A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．
-Kernel内部では幅が固定された型を基本的に使用せずに`word`型を使用する．
-`word`はArchitecture-SpecificなWord幅を持つ符号なし整数型であり，`uintmax_t`や`usize`のAliasとして定義される．
-これにより，速度と移植容易性を実現する．
+A9N MicrokernelはC++20を用いて開発されているが，Kernel内部で広範に使用するための基本型を定義している．Kernel内部では幅が固定された型を基本的に使用せずに`word`型を使用する．`word`はArchitecture-SpecificなWord幅を持つ符号なし整数型であり，`uintmax_t`や`usize`のAliasとして定義される．これにより，速度と移植容易性を実現する．
+A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Message Register-Basedなものである．したがって，Kernelは多値の返却や正常値とエラー値の区別が可能な形式でUserに制御を返すことができる．そのため，言語のLibraryレベルでMapperを作成することにより，NativeなResult型やその他の型を返すことができる．このようなAPIのRustによるReference ImplementationはNun OS Frameworkに内包されている．
 
-A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Message Register-Basedなものである．
-したがって，Kernelは多値の返却や正常値とエラー値の区別が可能な形式でUserに制御を返すことができる．
-そのため，言語のLibraryレベルでMapperを作成することにより，NativeなResult型やその他の型を返すことができる．
-このようなAPIのRustによるReference ImplementationはNun OS Frameworkに内包されている．
-
-具体的な型定義は以下の通り (cf., @a9n::basic_types::types) である．これらは`a9n`Namespace内に定義される．
+具体的な型定義は以下の通り（cf., @a9n::basic_types::types）である．これらは`::a9n`というNamespaceに定義される．
 
 #figure(
     normal_table(
@@ -36,7 +29,7 @@ A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Mess
     caption: "Types"
 ) <a9n::basic_types::types>
 
-また，以下の定数群 (cf., @a9n::basic_types::constants) も同様に定義される．
+また，以下の定数群（cf., @a9n::basic_types::constants）も同様に定義される．
 
 #figure(
     normal_table(
@@ -50,8 +43,7 @@ A9NにおけるKernelの呼び出し機構はC ABIに依存しないVirtual Mess
 
 === API Primitive <a9n::api_primitive>
 
-A9N MicrokernelはUserに対してKernel Callを提供する．
-Kernel Callは細分化することができ，以下2 + 1個のAPIを提供する．これらは従来型SystemにおけるSystem Callに相当するものである:
+A9N MicrokernelはUserに対してKernel Callを提供する．Kernel Callは細分化することができ，以下2 + 1個のAPIを提供する．これらは従来型SystemにおけるSystem Callに相当するものである:
 
 + Capability Call
 + Yield Call
@@ -62,22 +54,15 @@ Kernel Callは細分化することができ，以下2 + 1個のAPIを提供す�
 === Capability Overview <a9n::capability_overview>
 
 // Capabilityの基礎概念を説明する
-A9N Microkernelの実装にはObject-Capability Model @DennisEtAl:1966 によるCapability-Based Securityを採用し，従来のシステムが抱えていた課題を解消した．
-Capabilityは特権的リソース : Objectに対するアクセス権限を示すUniqueなTokenである．
-従来のACLを用いたアクセス ── リソース自身がPermissionを確認する方式とは異なり，該当Capabilityの所有者のみが操作を実行可能である．
-このように，PoLPを満たしつつも柔軟なアクセス制御を実現する．
+A9N Microkernelの実装にはObject-Capability Model @DennisEtAl:1966 によるCapability-Based Securityを採用し，従来のシステムが抱えていた課題を解消した．Capabilityは特権的リソース : Objectに対するアクセス権限を示すUniqueなTokenである．従来のACLを用いたアクセス ── リソース自身がPermissionを確認する方式とは異なり，該当Capabilityの所有者のみが操作を実行可能である．このように，PoLPを満たしつつも柔軟なアクセス制御を実現する．
 
-言い換えるとCapabilityはTokenであり，間接的にObjectへアクセスするためのHandleである．
-要するに，あらゆる特権的操作はObjectが持つ固有機能の呼び出しとしてModel化される．したがって，Object-Oriented ProgrammingにおけるObjectのMethod Callと同等に捉えることができる．
-また，CapabilityとObjectを同一視することもできる．よって，この文書ではCapabilityとObjectを同義として扱う．
+言い換えるとCapabilityはTokenであり，間接的にObjectへアクセスするためのHandleである．要するに，あらゆる特権的操作はObjectが持つ固有機能の呼び出しとしてModel化される．したがって，Object-Oriented ProgrammingにおけるObjectのMethod Callと同等に捉えることができる．また，CapabilityとObjectを同一視することもできる．よって，この文書ではCapabilityとObjectを同義として扱う．
 
 Capabilityは複数のContext間でCopyやMoveが可能である．この仕組みにより，UserはCapabilityをServer間で委譲して特権的な操作の実行範囲を最小化できる．
 
 === Capabilityの操作体系 <a9n::capability_operation>
 
-A9N Microkernelにおいて，操作対象のCapabilityを指定するためにCapability Descriptorと呼ばれる符号なし整数型を用いる．
-Capability Descriptorは後述するCapability Nodeを再帰的に探索するためのAddressである．
-Capability Callの実行時，First ArgumentとしてCapability Descriptorを指定する (@capability_call_pseudo_code) ことでRoot Capability Nodeから対象が暗黙的に探索される．
+A9N Microkernelにおいて，操作対象のCapabilityを指定するためにCapability Descriptorと呼ばれる符号なし整数型を用いる．Capability Descriptorは後述するCapability Nodeを再帰的に探索するためのAddressである．Capability Callの実行時，First ArgumentとしてCapability Descriptorを指定する（@capability_call_pseudo_code）ことでRoot Capability Nodeから対象が暗黙的に探索される．
 
 #figure(
     ```rust
@@ -88,14 +73,11 @@ Capability Callの実行時，First ArgumentとしてCapability Descriptorを指
 
 === Capability Slot <a9n::capability_slot>
 
-Capabilityは内部的にCapability Slotと呼ばれるデータ構造に格納される．
-Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capability Rights，Dependency Nodeから構成される．
-また，Capability Slotは$"WordWidth" * 8$byteにAlignされる(e.g., 32bit => 32byte, 64bit => 64byte)．したがって，Cache Line上に乗せやすくなる．
+Capabilityは内部的にCapability Slotと呼ばれるデータ構造に格納される．Capability SlotはCapability ComponentへのPointerとSlot Local Data，Capability Rights，Dependency Nodeから構成される．また，Capability Slotは$"WordWidth" * 8$byteにAlignされる(e.g., 32bit => 32byte, 64bit => 64byte)．したがって，Cache Line上に乗せやすくなる．
 
 ==== Capability Component <a9n::capability_component>
 
-すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@a9n::capability_component::definition)．
-Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposite Patternを統合したものであり，Capabilityの実行と初期化，探索を統一的なInterfaceによって提供する.
+すべてのCapabilityをC++上で統一的に扱うため，Capability ComponentというInterface Classを定義する (@a9n::capability_component::definition)．Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposite Patternを統合したものであり，Capabilityの実行と初期化，探索を統一的なInterfaceによって提供する.
 
 #figure(
     ```cpp
@@ -125,23 +107,13 @@ Capability ComponentはGoF @GammaEtAl:1994 におけるCommand PatternとComposi
 
 ==== Slot Local Data <a9n::slot_local_data>
 
-SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．
-例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．
-しかしながらMemoryに関連するCapability(e.g., Generic, Page Table, Frame)を考えたとき，これらのために1つずつUniqueなInstanceを生成していては効率が悪い．
-よって，そのようなUsecaseに対応するためSlot Local Dataを導入した．
-対象のCapabilityはSlot Local Dataにそれらの情報を保持し，Capability Componentとして指すInstanceはCapabilityごとに単一のものを共有するようなアプローチを取ることができる．
-これにより，Memoryの新規Allocationを必要とせずにCapabilityを生成可能とした．
-このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
+SlotにCapability ComponentへのPointerを格納するだけでは問題が生じる．例えばProcess Control BlockのようなCapabilityを考えると，これはComponentとしてのInstanceごとに状態を持つため問題は発生しない．しかしながらMemoryに関連するCapability(e.g., Generic, Page Table, Frame)を考えたとき，これらのために1つずつUniqueなInstanceを生成していては効率が悪い．よって，そのようなUsecaseに対応するためSlot Local Dataを導入した．対象のCapabilityはSlot Local Dataにそれらの情報を保持し，Capability Componentとして指すInstanceはCapabilityごとに単一のものを共有するようなアプローチを取ることができる．これにより，Memoryの新規Allocationを必要とせずにCapabilityを生成可能とした．このSlot Local Dataという仕組みはMemoryに関連するCapabilityに限らず有用であり，どのように利用するかはCapability Componentの実装によって決定される．
 
 ==== Capability Rights <a9n::capability_rights>
 
-前述した通り，一部の例外を除いてCapabilityはCopyやMoveが可能である．
-CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityとして扱われる．
+前述した通り，一部の例外を除いてCapabilityはCopyやMoveが可能である．CapabilityがCopyされた場合，DestinationとSourceは同一のCapabilityとして扱われる．
 
-しかし，これらのCapabilityに対して別々のアクセス制御を実行したいUsecaseが存在する．
-典型例として，IPC Port Capabilityを親が子に共有するが，子からはこのCapabilityを削除できないようにしたい#footnote()[Dependency Nodeを除いて親や子といった概念はKernelに存在しない．これはKernelを使用するOS Layerでみたときの例である．]場合がある．
-このようなシナリオに対応するため，Capability Slot固有のCapability Rightsを導入した．
-Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@a9n::capability_rights::definition)．
+しかし，これらのCapabilityに対して別々のアクセス制御を実行したいUsecaseが存在する．典型例として，IPC Port Capabilityを親が子に共有するが，子からはこのCapabilityを削除できないようにしたい#footnote()[Dependency Nodeを除いて親や子といった概念はKernelに存在しない．これはKernelを使用するOS Layerでみたときの例である．]場合がある．このようなシナリオに対応するため，Capability Slot固有のCapability Rightsを導入した．Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御するためのBit Flagである (@a9n::capability_rights::definition)．
 
 #figure(
     ```cpp
@@ -160,14 +132,11 @@ Capability RightsはCapabilityのCopyやRead，Writeに対する挙動を制御�
     caption: "Capability Rightsの定義",
 ) <a9n::capability_rights::definition>
 
-Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．
-原則として，Capabilityは生成時点にすべてのRights Bitが設定される．
-ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
+Capability Rightsには，先天的に設定されるものと後天的に設定するものの両方が存在する．原則として，Capabilityは生成時点にすべてのRights Bitが設定される．ただし，Copyを許可すると同一性が失われてしまうようなCapabilityはCopyが最初から禁止される．
 
 ==== Dependency Node <a9n::dependency_node>
 
-Capabilityはその依存関係をDependency Node (@a9n::dependency_node_definition) によって管理する．
-Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
+Capabilityはその依存関係をDependency Node（@a9n::dependency_node_definition）によって管理する．Dependency Nodeは依存関係にあるCapability Slotを保持するが，`depth`によって子と兄弟を区別する．
 
 #figure(
     ```cpp
@@ -193,8 +162,7 @@ Dependency Nodeは所有関係を表すものではなく，あくまでも派�
 
 === Virtual Message Register <a9n::virtual_message_register>
 
-A9N MicrokernelではCapability CallのためにVirtual Message Register#footnote[L4 Microkernel FamilyにおけるUTCBと同等]機構を使用する．
-Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
+A9N MicrokernelではCapability CallのためにVirtual Message Register#footnote[L4 Microkernel FamilyにおけるUTCBと同等]機構を使用する．Virtual Message Registerはその名の通り，Communicationに使用するためのMessageを格納するRegisterである．
 
 - ArchitectureごとにVirtual Message RegisterはHardware RegisterへMapされる#footnote()[ABI項を参照]．
 - Hardware RegisterにMapできないMessage#footnote()[ABI項を参照]はProcess Control BlockごとのIPC Bufferに格納される．IPC BufferはKernelとUser間のShared Memoryであり，必ず存在が保証される．
@@ -206,17 +174,11 @@ Virtual Message Registerはその名の通り，Communicationに使用するた�
 
 === Scheduler <a9n::scheduler>
 
-A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．
-Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持つ．
-基本的には従来のSchedulerと同じだが，Benno Schedulerが異なる点は必ず実行可能なProcessのみをQueueに保持するところにある．
-このアプローチはQueue操作を簡易化し，なおかつHot-Cache内の実行による高速化を実現することができる．
-その結果，SystemはLow Latencyとなる．
+A9N MicrokernelはBenno Scheduler @ElphinstoneEtAl:2013 をProcess Schedulingに使用する．Priority-Based Round-Robin Schedulerであり，255段階のPriority Levelを持つ．基本的には従来のSchedulerと同じだが，Benno Schedulerが異なる点は必ず実行可能なProcessのみをQueueに保持するところにある．このアプローチはQueue操作を簡易化し，なおかつHot-Cache内の実行による高速化を実現することができる．その結果，SystemはLow Latencyとなる．
 
 === Kernel-Level Stack <a9n::kernel_stack>
 
-A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．
-従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．
-CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Context数のScalabilityを向上させる．
+A9N MicrokernelはEvent Kernel Architectureであり，Kernel StackをCPUコアごとに割り当てるSingle Kernel Stack @Warton:2005 アプローチを採用している．従来のProcess Kernel Architectureでは実行可能なContextごとに4-8KiBのKernel Stackを割り当てていたが，この方式では大量のKernel Memoryを消費してしまう欠点がある．CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Context数のScalabilityを向上させる．
 
 // TODO: いい感じの図を作る
 
@@ -224,8 +186,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 === Capability Callの略式表記 <a9n::capability_call::abbreviation>
 
-本文書では各CapabilityごとのCapability Callを略式表記する．
-通常，Capability Call全てに共通な引数は以下のようになる：
+本文書では各CapabilityごとのCapability Callを略式表記する．通常，Capability Call全てに共通な引数は以下のようになる：
 
 #api_table(
     "message_register[0]", "target_descriptor", "対象CapabilityへのDescriptor",
@@ -236,11 +197,10 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 #api_table(
     "message_register[0]", "is_success", "操作の成否",
-    "message_register[1]", "error", [Capability CallのError#footnote()[現在は簡易化のためにCapability Error型 (cf., @a9n::capability_result) のみを返しているが，将来的にこのFieldもCapability-Definedな値の返却に使用する予定である．]],
+    "message_register[1]", "error", [Capability CallのError#footnote()[現在は簡易化のためにCapability Error型（cf., @a9n::capability_result）のみを返しているが，将来的にこのFieldもCapability-Definedな値の返却に使用する予定である．]],
 )
 
-このようにMessage RegisterのIndex : 0とIndex : 1は予約されているが，統合されCapability Result型 (cf., @a9n::capability_result::definition) として使用される．
-それ以外のMessage RegisterはそれぞれのCapabilityが定義したように使用できる．
+このようにMessage RegisterのIndex : 0とIndex : 1は予約されているが，統合されCapability Result型（cf., @a9n::capability_result::definition）として使用される．それ以外のMessage RegisterはそれぞれのCapabilityが定義したように使用できる．
 
 したがって，各Capability Callの略式表記は以下のようになる：
 - 返り値がCapability Result型のみの場合，返り値の表記は省略する．返り値が存在する場合はそれを記述するが，Capability Resultは省略する．
@@ -248,8 +208,7 @@ CPUコアごとのKernel StackはMemory Footprintを削減し，実行可能Cont
 
 === Capability Result <a9n::capability_result>
 
-Capability Resultは`liba9n::result`を用いて定義されるCapability Callの返り値であり，以下のように (cf., @a9n::capability_result::definition) 定義される．
-これらは`a9n::kernel` Namespaceに内包される．
+Capability Resultは`liba9n::result`を用いて定義されるCapability Callの返り値であり，以下のように（cf., @a9n::capability_result::definition）定義される．これらは`a9n::kernel` Namespaceに内包される．
 
 #figure(
     ```cpp
@@ -273,13 +232,9 @@ Capability Resultは`liba9n::result`を用いて定義されるCapability Call�
 
 === Capability Node <a9n::capability_node>
 
-Capability NodeはCapabilityを格納するためのCapabilityであり，seL4 MicrokernelにおけるCNodeの設計をベースとしている．
-1つのNodeは$2^"RadixBits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．
-したがって，論理的にはCapability NodeをCapability Slotの配列としてみなすことができる．
+Capability NodeはCapabilityを格納するためのCapabilityであり，seL4 MicrokernelにおけるCNodeの設計をベースとしている．1つのNodeは$2^"RadixBits"$個のCapability Slotを持ち．この数だけCapabilityを格納できる．したがって，論理的にはCapability NodeをCapability Slotの配列としてみなすことができる．
 
-Capability Nodeは効率のためにRadix Page Tableをベースとした木構造を取る．
-仮に単純なLinked ListとしてCapability Nodeを実装した場合，Capability Slotの探索には$O(n)$のコストが発生する．
-一方，Radix Page Tableをベースとした実装を採用することで，Capability Slotの探索を$O(log n)$で実現することができる．
+Capability Nodeは効率のためにRadix Page Tableをベースとした木構造を取る．仮に単純なLinked ListとしてCapability Nodeを実装した場合，Capability Slotの探索には$O(n)$のコストが発生する．一方，Radix Page Tableをベースとした実装を採用することで，Capability Slotの探索を$O(log n)$で実現することができる．
 
 Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，この具象となる実装を呼び出すことでCapability Nodeを探索し，対象のCapability Slotを取得することができる．
 
@@ -288,7 +243,7 @@ Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，こ
 
 ==== `capability_node::traverse_slot`#footnote()[`capability_component::traverse_slot`の実装]
 `traverse_slot`Node間の再帰的な探索であり，以下のように実装される:
-+ Capability DescirptorからDescriptor Used Bits分をSkipした箇所からNodeのRadix Bits分を取り出し (@a9n::capability_node::calculate_capability_index) ，Node Indexとする．
++ Capability DescirptorからDescriptor Used Bits分をSkipした箇所からNodeのRadix Bits分を取り出し（@a9n::capability_node::calculate_capability_index），Node Indexとする．
 + Node Indexを用いてSlotを取得し，次の探査対象とする．
 + 3で取得したSlotからCapability Componentを取得し，再帰的に`taverse_slot`を呼び出す．
 
@@ -308,7 +263,7 @@ inline const a9n::word capability_node::calculate_capability_index(
         (ignore_bits + radix_bits + descriptor_used_bits)
     );
     // 未使用bitの先頭からradix bitsを取り出しindexとする．
-    return (descriptor >> shift_bits) & mask_bits;
+    return（descriptor >> shift_bits）& mask_bits;
 }
     ```,
     caption: "Node Indexの取得",
@@ -318,8 +273,7 @@ Node以外のCapability Component実装は，`retrieve_slot`や`traverse_slot`�
 
 ==== Addressing <a9n::capability_node::addressing>
 
-Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．
-Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@a9n::capability_descriptor)，Capability Nodeの探索上限を示す．
+Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@a9n::capability_descriptor)，Capability Nodeの探索上限を示す．
 
 #figure(
     bytefield(
@@ -355,10 +309,9 @@ $ log_2(1024) = 10 $
 $ log_2(64) = 6 $
 となる．
 
-そして，$"Node"_0$のIndex : $"0x02"$に$"Node"_1$を格納し，$"Node"_1$のIndex : $"0x03"$に$"Node"_2$を格納する．
-また，$"Node"_2$のIndex : $"0x04"$にNodeではない終端のCapabilityとして$"Capability"_"Target"$を格納する．
+そして，$"Node"_0$のIndex : $"0x02"$に$"Node"_1$を格納し，$"Node"_1$のIndex : $"0x03"$に$"Node"_2$を格納する．また，$"Node"_2$のIndex : $"0x04"$にNodeではない終端のCapabilityとして$"Capability"_"Target"$を格納する．
 
-これを図示すると (@a9n::capability_node::example) になる．
+これを図示すると（@a9n::capability_node::example）になる．
 
 #figure([
     #cetz.canvas({
@@ -395,7 +348,7 @@ $ log_2(64) = 6 $
             rect((-box_width_half, 0), (box_width_half, -box_height), name: "address_box")
             // content((calculate_pos_x(0) - padding, -box_height_half), "", anchor: "east")
 
-            for (i, descriptor_index, radix) in (
+            for(i, descriptor_index, radix)in (
                 (0, "0x02", 0x08),
                 (1, "0x03", 0x0a),
                 (2, "0x04", 0x06),
@@ -417,7 +370,7 @@ $ log_2(64) = 6 $
                     let step = (y_u - y_d) / 5
                     line((x_l, y_u - (step * j)), (x_r, y_u - (step * j)))
 
-                    if (j == 3) {
+                    if (j == 3){
                         rect((x_l, y_u - (step * j)), (x_r, y_u - (step * (j + 1))), fill: luma(240))
                         let x_m = (x_l + x_r) / 2
                         let y_m = ((y_u - (step * j)) + (y_u - (step * j + 0.25 + 0.03))) / 2
@@ -429,7 +382,7 @@ $ log_2(64) = 6 $
                         // 1. draw line to target index
                         line((x + 0.25, -0.5), (x + 0.25, y_m), (x_l, y_m), mark: (end: ">"))
 
-                        if (i >= 2) {
+                        if (i >= 2){
                             continue
                         }
 
@@ -448,7 +401,7 @@ $ log_2(64) = 6 $
     caption: "Capability構成の例"
 ) <a9n::capability_node::example>
 
-ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは (@a9n::capability_node::example::target_descriptor) のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
+ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは（@a9n::capability_node::example::target_descriptor）のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
 
 //   0001 1000 = 0x24 (depth)
 //   0000 0011 = 0x02 (node_0)
@@ -470,8 +423,7 @@ $
     overbracket(underbracket(000101, "Index"_("Node"_2)), "6bit")
 $ <a9n::capability_node::example::parsed_capability_target_descriptor>
 
-まず，先頭8bitからDepth Bitsが取り出される．この場合は$"0b00011000" = "0x24"$となる．
-Depth Bitsの妥当性を示すため，実際に計算を行う．
+まず，先頭8bitからDepth Bitsが取り出される．この場合は$"0b00011000" = "0x24"$となる．Depth Bitsの妥当性を示すため，実際に計算を行う．
 
 $"Capability"_"Target"$に対応するDepth Bitsは (@a9n::capability_node::example::capability_target_calculated_depth)のように計算される：
 
@@ -485,16 +437,13 @@ $
     "Depth"_"Max" = "WordWidth" - 8
 $ <a9n::capability_node::example::capability_max_depth>
 
-続いて，$"Node"_0$を探索するためのIndexを取得する．$"Node"_0$のRadix Bitsより8bitを取り出し，取得した$"0x02"$を$"Index"_("Node"_0)$とする．
-これを用いて$"Node"_0$から$"Node"_1$を得る．
+続いて，$"Node"_0$を探索するためのIndexを取得する．$"Node"_0$のRadix Bitsより8bitを取り出し，取得した$"0x02"$を$"Index"_("Node"_0)$とする．これを用いて$"Node"_0$から$"Node"_1$を得る．
 
-次に，$"Node_1"$を探索するためのIndexを取得する．$"Node_1"$のRadix Bitsより8bitを取り出し，取得した$"0x03"$を$"Index"_("Node"_1)$とする．
-これも同様に$"Node_1"$のIndexとし，$"Node_2"$を得る．
+次に，$"Node_1"$を探索するためのIndexを取得する．$"Node_1"$のRadix Bitsより8bitを取り出し，取得した$"0x03"$を$"Index"_("Node"_1)$とする．これも同様に$"Node_1"$のIndexとし，$"Node_2"$を得る．
 
-最後に，$"Node_2"$を探索するためのIndexを取得する．$"Node_2"$のRadix Bitsより8bitを取り出し，取得した$"0x04"$を$"Index"_("Node_2")$とする．
-これにより，最終的な$"Capability"_"Target"$が取得される．
+最後に，$"Node_2"$を探索するためのIndexを取得する．$"Node_2"$のRadix Bitsより8bitを取り出し，取得した$"0x04"$を$"Index"_("Node_2")$とする．これにより，最終的な$"Capability"_"Target"$が取得される．
 
-次の例として，$"Node"_1$を対象にCapability Callを実行したい場合を考えると，Capability Descriptorは (@a9n::capability_node::example::capability_node_1_descriptor) のようになる:
+次の例として，$"Node"_1$を対象にCapability Callを実行したい場合を考えると，Capability Descriptorは（@a9n::capability_node::example::capability_node_1_descriptor）のようになる:
 
 #text()[$
     "capability_descriptor"        &:= &"0x"&"803xxxx" &("hex") \ 
@@ -510,16 +459,14 @@ $
     overbracket(underbracket("XXXXXXXXXXXXXXXX", "Unused"), "Remain Bits")
 $ <a9n::capability_node::example::parsed_node_1_descriptor>
 
-これも同様にDepth Bitsの妥当性を検証する．
-この場合，Depth Bitsは (@a9n::capability_node::example::capability_node_1_depth)のように計算される：
+これも同様にDepth Bitsの妥当性を検証する．この場合，Depth Bitsは (@a9n::capability_node::example::capability_node_1_depth)のように計算される：
 
 $
     "Depth"("Capability"_"Target") &= "Radix"("Node"_0) \ 
     &= 8
 $ <a9n::capability_node::example::capability_node_1_depth>
 
-Depth BitsはNodeのような非終端のCapabilityを指定するために使用される．常に最大値を使用した場合，必ず終端まで探索されてしまうためである．
-$"Capability"_"Target"$の探索と途中までは同様であるが，パース済みのDescriptorがDepth Bits以上になった時点で探索を終了する．
+Depth BitsはNodeのような非終端のCapabilityを指定するために使用される．常に最大値を使用した場合，必ず終端まで探索されてしまうためである．$"Capability"_"Target"$の探索と途中までは同様であるが，パース済みのDescriptorがDepth Bits以上になった時点で探索を終了する．
 
 ==== Capability Call
 
@@ -581,17 +528,14 @@ $"Capability"_"Target"$の探索と途中までは同様であるが，パース
 
 === Generic Capability <a9n::generic>
 
-Generic Capabilityは物理的なMemoryを抽象化したCapabilityである．
-GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsから構成される．
+Generic Capabilityは物理的なMemoryを抽象化したCapabilityである．GenericはBase Address，Size Radix Bits，Watermark，そしてDevice Bitsから構成される．
 
 - Base AddressはGenericが指すMemory Regionの開始Physical Addressである．
 - Size Radix BitsはGenericが指すMemory RegionのSizeを示すRadixであり，$2^"SizeRadixBits"$が実際のSizeである．この事実から分かるように，GenericのSizeは必ず2の累乗byteである．
 - WatermarkはGenericの使用状況を示すPhysical Addressである．
 - Device BitsはMemory RegionがDeviceのために使用されるような場合(e.g., MMIO)に設定される．
 
-Generic CapabilityはすべてのCapabilityを生成するためのFactoryとして機能する．
-Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．
-生成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
+Generic CapabilityはすべてのCapabilityを生成するためのFactoryとして機能する．Convert操作 によってGeneric Capabilityの領域を消費し，新たなCapabilityを生成することができる．生成したCapabilityはDependency Nodeへ子として設定され，破棄の再帰的な実行に利用される．
 
 ==== $log_2$ Based Allocation <a9n::generic::log2_based_allocation>
 
@@ -603,8 +547,7 @@ GenericのConvert操作時，次のステップでCapabilityを生成する：
 
 #v(1em)
 
-まず，引数として与えられたCapability TypeとSpecific BitsからSize Radixを取得する．
-Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とする対数をとる (@a9n::generic::calculate_radix_ceil)．
+まず，引数として与えられたCapability TypeとSpecific BitsからSize Radixを取得する．Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とする対数をとる (@a9n::generic::calculate_radix_ceil)．
 
 #figure(
     $ "SizeRadix" = ceil.l log_2("Sizeof"("Object")) ceil.r $,
@@ -613,7 +556,7 @@ Capability ObjectのSizeを最も近い2の累乗に切り上げ, 2を底とす�
 
 Specific Bitsが必要となる理由は，Specific Bitsによって全体としてのSizeが決定されるCapability NodeのようなCapabilityが存在するためである．
 
-次に，Size Radix分のMemory領域がAllocate可能か確認する．Allocateした場合のWatermarkを計算し (@a9n::generic::calculate_new_watermark) ，
+次に，Size Radix分のMemory領域がAllocate可能か確認する．Allocateした場合のWatermarkを計算し（@a9n::generic::calculate_new_watermark），
 
 #figure(
     $
@@ -638,11 +581,7 @@ Specific Bitsが必要となる理由は，Specific Bitsによって全体とし
 
 ==== Deallocation <a9n::generic::deallocation>
 
-Genericの再利用には，ConvertされたすべてのCapabilityをRemoveする必要がある．
-これはGenericに対してRevokeを実行することで再帰的に行われる．
-すなわち，ある$"Capability"_"A"$をConvertしたあとに$"Capability"_"B"$をConvertし，$"Capability"_"A"$をRemoveしても$"Capability"_"A"$が使用していた領域を再利用できない．
-これはGenericの構造を考えれば明らかである．Genericは単純化と高速化のために単一のWatermarkのみで使用量管理を実現している．したがって，高粒度な再利用をKernelは提供しない．
-その実現には，Genericから再利用単位ごとに子となるようなGenericを生成する必要がある#footnote[この実装は完全にUser-Levelで実現される．]．
+Genericの再利用には，ConvertされたすべてのCapabilityをRemoveする必要がある．これはGenericに対してRevokeを実行することで再帰的に行われる．すなわち，ある$"Capability"_"A"$をConvertしたあとに$"Capability"_"B"$をConvertし，$"Capability"_"A"$をRemoveしても$"Capability"_"A"$が使用していた領域を再利用できない．これはGenericの構造を考えれば明らかである．Genericは単純化と高速化のために単一のWatermarkのみで使用量管理を実現している．したがって，高粒度な再利用をKernelは提供しない．その実現には，Genericから再利用単位ごとに子となるようなGenericを生成する必要がある#footnote[この実装は完全にUser-Levelで実現される．]．
 
 ==== Capability Call
 
@@ -657,7 +596,7 @@ Genericの再利用には，ConvertされたすべてのCapabilityをRemoveす�
     "word", "node_index", "格納先NodeのIndex",
 )
 
-Specific Bits (@a9n::generic::specific_bits) はCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
+Specific Bits（@a9n::generic::specific_bits）はCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
 
 #figure(
     normal_table(
@@ -682,8 +621,7 @@ Specific Bits (@a9n::generic::specific_bits) はCapability Type依存の初期�
 
 === Address Space Capability
 
-Address Space CapabiltyはVirtual Address Spaceを抽象化したCapabilityである．すべての実行可能なContextはAddress Space Capabilityを持ち，Context Switch時に切り替えることでAddress Spaceを切り替える．
-異なる2つのProcess Control Blockに同一のAddress Space Capabilityを設定することで，同一のVirtual Address Spaceを共有し，いわゆるThreadをUser-Levelで実現することができる．
+Address Space CapabiltyはVirtual Address Spaceを抽象化したCapabilityである．すべての実行可能なContextはAddress Space Capabilityを持ち，Context Switch時に切り替えることでAddress Spaceを切り替える．異なる2つのProcess Control Blockに同一のAddress Space Capabilityを設定することで，同一のVirtual Address Spaceを共有し，いわゆるThreadをUser-Levelで実現することができる．
 
 Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping可能である．これにより，User-LevelでVirtual Memory Managementを実現することができる．
 
@@ -726,19 +664,14 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 
 === Page Table Capability
 
-Page Table CapabilityはPage Tableをそのまま抽象化したCapabilityである．
-Page Table CapabilityはAddress Space CapabilityにMap可能であり，Virtual Address Spaceに対するPage TableのMappingを行う．
-使用時にArchitecture-Specificな知識を必要とせず，階層構造はDepthによって管理される．
+Page Table CapabilityはPage Tableをそのまま抽象化したCapabilityである．Page Table CapabilityはAddress Space CapabilityにMap可能であり，Virtual Address Spaceに対するPage TableのMappingを行う．使用時にArchitecture-Specificな知識を必要とせず，階層構造はDepthによって管理される．
 
-x86_64におけるPage Tableを例示する．
-x86_64 Architectureは通常4レベルのPage Tableを持つ．
-まだPage TableがMapされていない状態を仮定してVirtual AddressをMapすることを考える．
+x86_64におけるPage Tableを例示する．x86_64 Architectureは通常4レベルのPage Tableを持つ．まだPage TableがMapされていない状態を仮定してVirtual AddressをMapすることを考える．
 + PML4はAddress Space Capabilityそのものである．
 + PDPTはDepth : 3のPage Table Capabilityである．
 + PDはDepth : 2のPage Table Capabilityである．
 + PTはDepth : 1のPage Table Capabilityである．
-以上3つのPage TableをAddress SpaceにMap後，Address Spaceの`get_unset_depth`を実行すると0が返される．
-Depth : 0はFrame Capabilityに対応するため，これをMapすることでVirtual Address Spaceに対するMappingが完了する．
+以上3つのPage TableをAddress SpaceにMap後，Address Spaceの`get_unset_depth`を実行すると0が返される．Depth : 0はFrame Capabilityに対応するため，これをMapすることでVirtual Address Spaceに対するMappingが完了する．
 
 ==== Architecture-IndependentなVirtual Memory Management
 
@@ -777,10 +710,7 @@ Frame CapabilityもPage Table Capabilityと同様にAddress Space CapabilityにM
 
 === Process Control Block Capability
 
-Process Control Blockは，従来のSystemにおけるProcessを抽象化したCapabilityである．
-Hardware ContextとTime Slice，そしていくつかのCapabilityを持ち，SchedulerによってScheduleされる対象である．
-ただし，従来の概念とは異なり提供する機構が最小に保たれる．
-したがって，ProcessやThreadといった概念の実現にはUser-Levelでの適切なConfigurationが必要である．
+Process Control Blockは，従来のSystemにおけるProcessを抽象化したCapabilityである．Hardware ContextとTime Slice，そしていくつかのCapabilityを持ち，SchedulerによってScheduleされる対象である．ただし，従来の概念とは異なり提供する機構が最小に保たれる．したがって，ProcessやThreadといった概念の実現にはUser-Levelでの適切なConfigurationが必要である．
 
 ==== Capability
 
@@ -811,8 +741,7 @@ Process Control BlockにはいくつかのCapabilityをConfigurationすること
     // TODO: いい感じの図を作る
 ]
 
-Process Control Blockに必要なCapabilitiyをConfiguration後#footnote[Root Address Spaceは必須だが，その他のCapabilityはあくまでもOptionalである]，Resume操作を実行することでSchedulerのQueueに登録される．
-Benno Schedulerは前述の通り実行可能なContextのみをQueueとして持つため，PriorityやTime Sliceが考慮されたあとに実行が行われる．
+Process Control Blockに必要なCapabilitiyをConfiguration後#footnote[Root Address Spaceは必須だが，その他のCapabilityはあくまでもOptionalである]，Resume操作を実行することでSchedulerのQueueに登録される．Benno Schedulerは前述の通り実行可能なContextのみをQueueとして持つため，PriorityやTime Sliceが考慮されたあとに実行が行われる．
 
 ==== Capability Call
 
@@ -864,13 +793,12 @@ Performanceのため，Process Control Blockにおける各ParameterはConfigura
     caption: "Configuration Info"
 ) <a9n::process_control_block::configuration_info>
 
-Configuration Infoの各BitがそれぞれのFieldに対応する．
-このBitが立っている場合，そのFieldがConfigurationされる．逆に言えば，立っていない場合そのFieldに対応する引数は無視される．
+Configuration Infoの各BitがそれぞれのFieldに対応する．このBitが立っている場合，そのFieldがConfigurationされる．逆に言えば，立っていない場合そのFieldに対応する引数は無視される．
 
 #v(1em)
 
 #technical_term(name: `read_register`)[
-    Process Control BlockのRegister (Hardware Context) を読み出す．
+    Process Control BlockのRegister（Hardware Context）を読み出す．
     読み出したRegisterはMessage RegisterのIndex:3#footnote[Index:0とIndex:1はCapability Resultによって予約されている．また，そのまま`write_register`を実行してコピーを可能とするためにIndex:2も予約されている．]から
     n#footnote[Architectureに依存．詳細はABIを参照．]へ格納される．
 ]
@@ -891,7 +819,7 @@ Configuration Infoの各BitがそれぞれのFieldに対応する．
 )
 
 #technical_term(name: `write_register`)[
-    Process Control BlockにRegister (Hardware Context) を書き込む．
+    Process Control BlockにRegister（Hardware Context）を書き込む．
     Message RegisterのIndex:3からIndex:nを読み出し，対象Process Control BlockのRegisterに書き込む．
 ]
 
@@ -917,15 +845,9 @@ Configuration Infoの各BitがそれぞれのFieldに対応する．
 
 === IPC Port Capability
 
-A9N MicrokernelはIPC PortによるRendezvous Indirect IPCを採用している．
-ある実行可能なContextがIPC PortへMessageをSendすると，同じIPC Portを持つ他のContextがそのMessageをReceiveできる．
-SenderとReceiverは1:nもしくはn:1の関係を持つ．
+A9N MicrokernelはIPC PortによるRendezvous Indirect IPCを採用している．ある実行可能なContextがIPC PortへMessageをSendすると，同じIPC Portを持つ他のContextがそのMessageをReceiveできる．SenderとReceiverは1:nもしくはn:1の関係を持つ．
 
-例えばある$"IPCPort"_"A"$が存在したとして，$"Context"_"A"$が$"IPCPort"_"A"$にSend操作を実行したとする．
-この状態ではReceiverとなるContextが存在しないため，$"Context"_"A"$はBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
-さらに$"Context"_"B"$が$"IPCPort"_"A"$へSend操作を実行すると，やはりReceiverが存在しないためBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．
-ここで，Receiverとなる$"Context"_"C"$が$"IPCPort"_"A"$へReceive操作を実行すると，$"IPCPort"_"A"$が持つWait Queueの先頭から$"Context"_"A"$が取り出され，$"Context"_"A"$の持っていたMessageが$"Context"_"C"$にCopyされる．
-この例を図示すると (@a9n::ipc_port::send_receive_example) のようになる．
+例えばある$"IPCPort"_"A"$が存在したとして，$"Context"_"A"$が$"IPCPort"_"A"$にSend操作を実行したとする．この状態ではReceiverとなるContextが存在しないため，$"Context"_"A"$はBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．さらに$"Context"_"B"$が$"IPCPort"_"A"$へSend操作を実行すると，やはりReceiverが存在しないためBlockされ，$"IPCPort"_"A"$のWait Queueに追加される．ここで，Receiverとなる$"Context"_"C"$が$"IPCPort"_"A"$へReceive操作を実行すると，$"IPCPort"_"A"$が持つWait Queueの先頭から$"Context"_"A"$が取り出され，$"Context"_"A"$の持っていたMessageが$"Context"_"C"$にCopyされる．この例を図示すると（@a9n::ipc_port::send_receive_example）のようになる．
 
 #figure([
     // utility
@@ -964,8 +886,7 @@ SenderとReceiverは1:nもしくはn:1の関係を持つ．
 
 この例はSender:Receiverがn:1の場合を示すが，Sender:Receiverが1:nの場合も同様である．
 
-ここで重要なのが，IPC PortはMessageをBufferingしないという事実だ．IPC PortはSender/ReceiverのQueueを保持するが，これはMessageのQueueではない．
-MessageはSenderのVirtual Message RegisterからReceiverのVirtual Message Registerへ*直接*Copyされるため高速である．
+ここで重要なのが，IPC PortはMessageをBufferingしないという事実だ．IPC PortはSender/ReceiverのQueueを保持するが，これはMessageのQueueではない．MessageはSenderのVirtual Message RegisterからReceiverのVirtual Message Registerへ*直接*Copyされるため高速である．
 
 ==== Non-Blocking IPC
 
@@ -974,8 +895,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 
 ==== Call/Reply Mechanism
 
-先述したSendやReceive操作は一方向の通信であり，双方向通信にはコストが発生するため基本的に推奨されない．
-そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Model (@client_server_model) に特化した操作の仕様が推奨される．
+先述したSendやReceive操作は一方向の通信であり，双方向通信にはコストが発生するため基本的に推奨されない．そのため，IPC PortはCallとReply，Reply ReceiveというClient-Sever Model（@client_server_model）に特化した操作の仕様が推奨される．
 
 #figure([ 
     #diagram(
@@ -1005,12 +925,9 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 
 #v(1em)
 #technical_term(name: `call`)[
-    IPC Portから取得したContextに対してSendしReplyを待つ．
-    概念的にはSendとReceiveを組み合わせたものに近いが，この操作を実行したContextから見たときAtomicに送受信が実行される点が異なる．
-    言い換えると，MessageをSendした対象であるReceiverからMessageを受信することを保証できる．
+    IPC Portから取得したContextに対してSendしReplyを待つ．概念的にはSendとReceiveを組み合わせたものに近いが，この操作を実行したContextから見たときAtomicに送受信が実行される点が異なる．言い換えると，MessageをSendした対象であるReceiverからMessageを受信することを保証できる．
 
-    この操作を実現するため，Call時にそのCallerはReceiverへReply Objectを設定する．
-    このReply ObjectはReply StateとReply Target部によって構成される．
+この操作を実現するため，Call時にそのCallerはReceiverへReply Objectを設定する．このReply ObjectはReply StateとReply Target部によって構成される．
 
     Reply StateはReply Objectの状態を示し，SourceとDestinationの2つ存在する．
     また，それぞれに付随するContextを保持するためのPointerがReply Targetへ格納される．
@@ -1018,8 +935,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     - Callを実行し，Replyを待っている場合Source Reply ObjectにWAITが設定される．また，送信先のContextをSource Reply Targetに設定する．
     - Receiveを実行し，Reply先のContextが決定された場合Destination Reply ObjectにREADY_TO_REPLYが設定される．また，送信元のContextをDestination Reply Targetに設定する．
 
-    Source Reply Targetは一見不要に思えるが，これは無効な参照の発生を避けるために使用される．
-    仮にCallを実行した先のReceiverが途中で破棄された場合，Destination Reply Targetが無効なContextを指すことになる．したがって，Destination Reply Objectが設定されているようなContextを破棄する場合はSource Reply Targetを参照しCallを中止する必要がある．
+    Source Reply Targetは一見不要に思えるが，これは無効な参照の発生を避けるために使用される．仮にCallを実行した先のReceiverが途中で破棄された場合，Destination Reply Targetが無効なContextを指すことになる．したがって，Destination Reply Objectが設定されているようなContextを破棄する場合はSource Reply Targetを参照しCallを中止する必要がある．
     
     これらの構造を統合したものを(@a9n::ipc_port::call_reply_mechanism)に示す．
 
@@ -1058,9 +974,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 ]
 
 #technical_term(name: `reply`)[
-    Callに対してReceiveを実行した場合，先述した通りDestination Reply ObjectにREADY_TO_REPLYとCaller Contextが設定される．
-    ReplyはこのDestination Reply Objectを参照してMessageを送信する．言い換えると，設定されていない場合はすぐさまReturnする．
-    これも先述した通り，Receive先のContextとReply先のContextは同一であることが保証される．
+    Callに対してReceiveを実行した場合，先述した通りDestination Reply ObjectにREADY_TO_REPLYとCaller Contextが設定される．ReplyはこのDestination Reply Objectを参照してMessageを送信する．言い換えると，設定されていない場合はすぐさまReturnする．これも先述した通り，Receive先のContextとReply先のContextは同一であることが保証される．
 
     Reply Objectの存在によりIPC Portを介さない，直接的なMessageの送信が可能となる．Capability Callの仕様上IPC PortへのDescriptorを指定する必要はあるが，このIPC Portは文字通りどのIPC Portを指すものでも良い．
 ]
@@ -1074,7 +988,7 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
     + Replyを実行し，解析結果ごとの処理結果をClientに返す．
     + 1に戻る．
 
-    疑似コードを図示すると (@a9n::ipc_port::microkernel_client_server_pseudo_code) のようになる．
+    疑似コードを図示すると（@a9n::ipc_port::microkernel_client_server_pseudo_code）のようになる．
 
     #figure(
         ```c
@@ -1107,11 +1021,8 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
         caption: "Microkernelにおける典型的なServerのPseudo Code"
     ) <a9n::ipc_port::microkernel_client_server_pseudo_code>
 
-    このうち，ReceiveとReplyは結合し，Context SwitchやCache Missのコストを削減できる．
-    ただし，上記のPseudo Codeの順序をそのままに実装することはできない．A9N MicrokernelではVirtual Message RegisterをIPCの送受信ともに共通で使用するためである．
-    そのため，Receive Replyのような操作として実装してしまうとReplyするためのMessageがReceiveによって上書きされてしまう．
-    したがって，二者の順序を入れ替え，Replyを先に実行することでこの問題を回避する．
-    すると，(@a9n::ipc_port::reply_receive_pseudo_code) で示すようなStartupを目的とするReceiveが必要である．
+    このうち，ReceiveとReplyは結合し，Context SwitchやCache Missのコストを削減できる．ただし，上記のPseudo Codeの順序をそのままに実装することはできない．A9N MicrokernelではVirtual Message RegisterをIPCの送受信ともに共通で使用するためである．そのため，Receive Replyのような操作として実装してしまうとReplyするためのMessageがReceiveによって上書きされてしまう．
+    したがって，二者の順序を入れ替え，Replyを先に実行することでこの問題を回避する．すると，(@a9n::ipc_port::reply_receive_pseudo_code) で示すようなStartupを目的とするReceiveが必要である．
 
     #figure(
         ```c
@@ -1147,33 +1058,26 @@ SendやReceive操作はNon-Blockingで実行することも可能である．
 
 ==== Direct Context Switch <ipc_port::direct_context_switch>
 
-MicrokernelにおいてIPCは極めてCriticalな操作であり，可能な限りLow Latencyで実行する必要がある．
-そのためDirect Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限り#footnote[Schedulerに対象よりも高い優先度のContextが存在せず，なおかつ実行可能な場合を指す．]SenderからReceiverへ，またその逆のContextを直接Switchする．
+MicrokernelにおいてIPCは極めてCriticalな操作であり，可能な限りLow Latencyで実行する必要がある．そのためDirect Context Switch @ElphinstoneEtAl:2013 を採用し，可能な限り#footnote[Schedulerに対象よりも高い優先度のContextが存在せず，なおかつ実行可能な場合を指す．]SenderからReceiverへ，またその逆のContextを直接Switchする．
 
 ==== Identifier <a9n::ipc_port::identifier>
 
-同じIPC Portを共有(Copy)することでIPCは実現されるが，どのContextからMessageが送信されたかを判別するためにIdentifier機構を実装した．
-IdentifierはFiasco.OCにおけるLabelやseL4におけるBadgeに相当する，Kernelによって正当性が保証されるCapability Slot固有の値である．
+同じIPC Portを共有(Copy)することでIPCは実現されるが，どのContextからMessageが送信されたかを判別するためにIdentifier機構を実装した．IdentifierはFiasco.OCにおけるLabelやseL4におけるBadgeに相当する，Kernelによって正当性が保証されるCapability Slot固有の値である．
 
-送信元の識別を如何に実装するかを考える．
-通常のMicrokernelにおいてSenderの識別はPIDやTIDによって行われるが，A9N MicrokernelはGlobalなIDを採用していない．したがって異なるアプローチが必要である．
-Kernel-LevelのPIDやTIDが存在しない場合，IPC Messageのある領域をOSが予約しIDとする実装が考えられる．しかしこれは単なるProtocolに過ぎず，各Contextは自由に改竄できるため信頼性が低い．
-これを解決するのがIdentifierであり，User-Levelにおける柔軟かつSecureなContextの識別を実現する．
+送信元の識別を如何に実装するかを考える．通常のMicrokernelにおいてSenderの識別はPIDやTIDによって行われるが，A9N MicrokernelはGlobalなIDを採用していない．したがって異なるアプローチが必要である．Kernel-LevelのPIDやTIDが存在しない場合，IPC Messageのある領域をOSが予約しIDとする実装が考えられる．しかしこれは単なるProtocolに過ぎず，各Contextは自由に改竄できるため信頼性が低い．これを解決するのがIdentifierであり，User-Levelにおける柔軟かつSecureなContextの識別を実現する．
 
-IPC Portに対するIdentify操作により，Word型の値をIPC Port(が格納されているSlot)に設定できる．
-この値はSlot Local Data (@a9n::slot_local_data) に格納されるため，同じIPC Portを共有するContextごとに設定可能#footnote[実際にはSlot Levelで設定可能なため，各ContextがIdentifierを複数個持つこともできる．]である．
-そして，この値はIPCの各操作ごとにKernelの手で転送される．
+IPC Portに対するIdentify操作により，Word型の値をIPC Port(が格納されているSlot)に設定できる．この値はSlot Local Data（@a9n::slot_local_data）に格納されるため，同じIPC Portを共有するContextごとに設定可能#footnote[実際にはSlot Levelで設定可能なため，各ContextがIdentifierを複数個持つこともできる．]である．そして，この値はIPCの各操作ごとにKernelの手で転送される．
 
-あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights (@a9n::capability_rights) からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
+あるIPC PortのIdentifierを書き換え不可にするためには，Capability NodeのMintやDemote操作によってCapability Rights（@a9n::capability_rights）からModify Bitsを剥奪するだけでよい．この機構により，User-LevelでContextが持つIDの信頼性を保証できる．
 
 ==== Capability Transfer <a9n::ipc_port::capability_transfer>
 
-A9N MicrokernelはIPCを通じてCapabilityを転送 (Copy) できる．
+A9N MicrokernelはIPCを通じてCapabilityを転送（Copy）できる．
 
 - 送信者はIPC BufferのTransfer Source Descriptors Fieldに転送したいCapability Descriptorを設定する．転送の成功時，このFieldは0にリセットされる．
-- 受信者はIPC BufferのTransfer Destination Node Fieldに転送されたCapabilityを格納するNodeへのCapability Descriptorを設定し，またTransfer Destination Index Fieldに格納先NodeのIndex (Offset) を設定する．
+- 受信者はIPC BufferのTransfer Destination Node Fieldに転送されたCapabilityを格納するNodeへのCapability Descriptorを設定し，またTransfer Destination Index Fieldに格納先NodeのIndex（Offset）を設定する．
 
-Capability Transferは必ずIPC Bufferを介して行われるため，Virtual Message Register (@a9n::virtual_message_register) におけるHardware Registerが使用されない．したがって，Hardware Registerに格納可能なMessageのみで完結するIPCよりもやや低速である．
+Capability Transferは必ずIPC Bufferを介して行われるため，Virtual Message Register（@a9n::virtual_message_register）におけるHardware Registerが使用されない．したがって，Hardware Registerに格納可能なMessageのみで完結するIPCよりもやや低速である．
 
 ==== Data Structure
 
@@ -1265,7 +1169,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #api_table(
     "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
-    "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)]
+    "message_info", "info", [送信（Reply）するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)]
 )
 
 #technical_term(name: `reply_receive`)[IPC Portに対してReply Receiveを実行する．]
@@ -1273,7 +1177,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor],
-        "message_info", "info", [送信 (Reply) するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)],
+        "message_info", "info", [送信（Reply）するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)],
     ),
     caption: [`reply_receive`の引数]
 )
@@ -1281,7 +1185,7 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 #figure(
     api_table(
         "message_info", "info", [受信したMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
-        "word", "identifer", "送信元 (Caller) のIdentifier",
+        "word", "identifer", "送信元（Caller）のIdentifier",
         "word[n]", "messages", "受信したMessage",
     ),
     caption: [`reply_receive`の戻り値]
@@ -1298,12 +1202,11 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 === Notification Port Capability
 
-Notification PortはAsynchronous Notificationを実現するためのCapabilityである．
-Notification PortはIPC Portとは異なり，1WordのNotification Flag Fieldのみを持つ．
+Notification PortはAsynchronous Notificationを実現するためのCapabilityである．Notification PortはIPC Portとは異なり，1WordのNotification Flag Fieldのみを持つ．
 
 ==== Identifier
 
-IPC PortのIdentifier (cf., @a9n::ipc_port::identifier) と同じIdentifier機構を持つ．
+IPC PortのIdentifier（cf., @a9n::ipc_port::identifier）と同じIdentifier機構を持つ．
 
 ==== Capability Call
 
@@ -1366,9 +1269,7 @@ IPC PortのIdentifier (cf., @a9n::ipc_port::identifier) と同じIdentifier機�
 
 === Interrupt Region Capability
 
-Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する (cf., @a9n::interrupt_region::make_port::example) ためのCapabilityである．
-このCapabilityはGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．
-Genericを介さないためMemory Regionを消費することはない．
+Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する（cf., @a9n::interrupt_region::make_port::example）ためのCapabilityである．このCapabilityはGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．Genericを介さないためMemory Regionを消費することはない．
 
 #figure(block(inset: 1em)[
     #diagram(
@@ -1415,8 +1316,7 @@ Genericを介さないためMemory Regionを消費することはない．
 
 === Interrupt Port Capability
 
-Interrupt PortはInterrupt Regionから生成されるCapabilityである．
-特定のIRQ Numberと1:1で対応しており，割り込み発生時に指定したNotification PortへNotificationを送信する (cf., @a9n::interrupt_port::interrupt::example)．
+Interrupt PortはInterrupt Regionから生成されるCapabilityである．特定のIRQ Numberと1:1で対応しており，割り込み発生時に指定したNotification PortへNotificationを送信する (cf., @a9n::interrupt_port::interrupt::example)．
 
 #figure(block(inset: 1em)[
     #diagram(
@@ -1491,15 +1391,11 @@ Interrupt PortはInterrupt Regionから生成されるCapabilityである．
 
 === IO Port Capability
 
-IO PortはPort-Mapped IO (i.e., PMIO) を抽象化するCapabilityである．
-PMIOの存在はArchitectureに依存する．したがって，PMIOが存在しないArchitectureにおいて読み書き操作は無視される．
-IO PortもInterrupt Portと同様にGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．
-また，Genericを介さないためMemory Regionを消費しない．
+IO PortはPort-Mapped IO（i.e., PMIO）を抽象化するCapabilityである．PMIOの存在はArchitectureに依存する．したがって，PMIOが存在しないArchitectureにおいて読み書き操作は無視される．IO PortもInterrupt Portと同様にGenericからConvertできず，Init Serverの起動時にInit Protocolを通じて1つだけ生成される．また，Genericを介さないためMemory Regionを消費しない．
 
 ==== Region
 
-IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ読み書き操作が可能である．
-また，IO Portは自身のSubsetであるIO PortをMint操作によって生成することができる (cf., @a9n::io_port::mint::example)．これにより，特定のAddressに対してのみ読み書き操作を許可することができ，特権の最小化を実現する．
+IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ読み書き操作が可能である．また，IO Portは自身のSubsetであるIO PortをMint操作によって生成することができる (cf., @a9n::io_port::mint::example)．これにより，特定のAddressに対してのみ読み書き操作を許可することができ，特権の最小化を実現する．
 
 #figure([
     #diagram(
@@ -1569,25 +1465,19 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
 
 === Virtual CPU Capability
 
-Virtual CPU CapabilityはVirtualizationの根幹をなすCapabilityである．
-Virtual MachineはVirtual CPU上で動作する．したがって，Virtual CPUの状態を操作することでUser-LevelのVirtual Machine Monitorを実装する．
+Virtual CPU CapabilityはVirtualizationの根幹をなすCapabilityである．Virtual MachineはVirtual CPU上で動作する．したがって，Virtual CPUの状態を操作することでUser-LevelのVirtual Machine Monitorを実装する．
 
 Virtual CPUにはCapability CallとしてEnter操作が定義される．あるContextがEnterを実行するとそのContextはVirtual CPUにBindされScheduleされる．
 
 ==== Virtual CPU State Descriptor
 
-Virtual CPUはExit Reasonの発生時にVirtual CPUにEnterしているContextへ制御を返す．
-ここでVirtual CPUの状態を更新し，再び実行を開始することを考える．当然ながら状態を取得する必要があり，また書き込める必要がある．
-ここで一度制御が返されるたびにGet Stateのような操作を実行し，その後Set Stateのような操作を実行していては非効率である．
-このコストを削減するために毎回すべての状ad態を転送する手法も考えられるが，これも不要なCopyを伴うため非効率である．
+Virtual CPUはExit Reasonの発生時にVirtual CPUにEnterしているContextへ制御を返す．ここでVirtual CPUの状態を更新し，再び実行を開始することを考える．当然ながら状態を取得する必要があり，また書き込める必要がある．ここで一度制御が返されるたびにGet Stateのような操作を実行し，その後Set Stateのような操作を実行していては非効率である．このコストを削減するために毎回すべての状ad態を転送する手法も考えられるが，これも不要なCopyを伴うため非効率である．
 
 そこでVirtual CPU State Descriptorを導入する．このDescriptorは転送するStateを選択するためのBit Flagであり，Virtual CPUのExit Reasonごとに設定可能である．
 
 ==== Virtual IRQ
 
-Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQはVirtual Machine中で実際のIRQとして扱われる．
-使用例として，例えば定期的にVirtual IRQをInjectすることでClock InterruptをEmulateすることができる
-また，他のDevice Driverのような割り込みを使用する機構もEmulateできる．
+Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQはVirtual Machine中で実際のIRQとして扱われる．使用例として，例えば定期的にVirtual IRQをInjectすることでClock InterruptをEmulateすることができるまた，他のDevice Driverのような割り込みを使用する機構もEmulateできる．
 
 ==== Capability Call
 
@@ -1681,8 +1571,7 @@ Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQ�
 
 === Virtual Address Space Capability
 
-Virtual Address Space CapabilityはVirtual CPUのPhysical Address Spaceを抽象化するCapabilityである．
-このCapabilityはHost Physical Address (HPA) とGuest Physical Address (GPA) のMappingを行う．したがって，Guest Virtual AddressはVirtual CPU上のGuest自身が設定する．
+Virtual Address Space CapabilityはVirtual CPUのPhysical Address Spaceを抽象化するCapabilityである．このCapabilityはHost Physical Address（HPA) とGuest Physical Address (GPA）のMappingを行う．したがって，Guest Virtual AddressはVirtual CPU上のGuest自身が設定する．
 
 ==== Capability Call
 
@@ -1725,8 +1614,7 @@ Virtual Address Space CapabilityはVirtual CPUのPhysical Address Spaceを抽象
 
 === Virtual Page Table Capability
 
-Page Tableとは異なり，Virtual Address SpaceにおけるHost Physical AddressとGuest Physical AddressのMappingを行う．
-それ以外はPage Tableと同等の構造を持つ．
+Page Tableとは異なり，Virtual Address SpaceにおけるHost Physical AddressとGuest Physical AddressのMappingを行う．それ以外はPage Tableと同等の構造を持つ．
 
 ==== Capability Call
 
@@ -1736,8 +1624,7 @@ Page Tableとは異なり，Virtual Address SpaceにおけるHost Physical Addre
 
 === ABI <a9n::abi>
 
-A9N MicrokernelのHALはArchitectureごとにKernel ABIを定義する．
-ここでいうABIは，主にKernel CallとVirtual Message RegisterにおけるHardware RegisterのMappingを指す．
+A9N MicrokernelのHALはArchitectureごとにKernel ABIを定義する．ここでいうABIは，主にKernel CallとVirtual Message RegisterにおけるHardware RegisterのMappingを指す．
 
 ==== Hardware-Independent ABI Constants
 
@@ -1752,8 +1639,7 @@ Kernel Call Typeは全てのABIにおける共通値が以下として定義さ�
     caption: "Kernel Call Type"
 ) <a9n::abi::hardware_independent_constants>
 
-通常のSystemにおけるKernel Call TypeはSystem Call Numberとして知られるが，A9N Microkernelではこの値を負数として定義する．
-Kernel Call時に存在しないKernel Call Typeの値を指定するとIllegal Kernel Call Faultが発生する．したがって，ABI-LevelのKernel Call (System Call) Emulationが実現しやすくなる．
+通常のSystemにおけるKernel Call TypeはSystem Call Numberとして知られるが，A9N Microkernelではこの値を負数として定義する．Kernel Call時に存在しないKernel Call Typeの値を指定するとIllegal Kernel Call Faultが発生する．したがって，ABI-LevelのKernel Call（System Call）Emulationが実現しやすくなる．
 
 ==== x86_64 <a9n::abi::x86_64>
 
@@ -1785,14 +1671,13 @@ x86_64におけるKernel CallのABIは以下のように定義される (cf., @a
     caption: "x86_64におけるVirtual Message Register ABI"
 ) <a9n::abi::x86_64::virtual_message_register>
 
-これを超えるMessage Register (e.g., Message Register [$"n", n in NN, n > 8 $]) はIPC BufferのMessage Field [$n$] にMappingされる．
+これを超えるMessage Register（e.g., Message Register [$"n", n in NN, n > 8 $]）はIPC BufferのMessage Field [$n$] にMappingされる．
 
 #pagebreak()
 
 === Boot Protocol <a9n::boot_protocol>
 
-A9N MicrokernelはA9N Boot ProtocolをもってBootする必要があり，この根幹をなすのがBoot Infoである．
-Boot InfoはKernelの起動に必要な情報を格納する構造体であり，以下のように定義される (cf., @a9n::boot_protocol::boot_info)：
+A9N MicrokernelはA9N Boot ProtocolをもってBootする必要があり，この根幹をなすのがBoot Infoである．Boot InfoはKernelの起動に必要な情報を格納する構造体であり，以下のように定義される (cf., @a9n::boot_protocol::boot_info)：
 
 #figure(
     ```cpp
@@ -1812,7 +1697,7 @@ Boot InfoはKernelの起動に必要な情報を格納する構造体であり�
 #technical_term(name: `memory_info`)[
     Memory Info(@a9n::boot_protocol::memory_info) はKernelに利用可能なPhysical Memory Regionを伝達するための構造である．
     Kernelの起動前にメモリ領域の開始Address, Page SizeをUnitとするPage Count, およびMemory Typeを収集し格納する必要がある．
-    Kernelはこの情報をもとにGenericを生成し，後述するInit Info (@a9n::init_protocol::init_info) へ情報を再格納してUserに委譲する．
+    Kernelはこの情報をもとにGenericを生成し，後述するInit Info（@a9n::init_protocol::init_info）へ情報を再格納してUserに委譲する．
 ]
 
 #figure(
@@ -1841,7 +1726,7 @@ Boot InfoはKernelの起動に必要な情報を格納する構造体であり�
 
 #technical_term(name: `init_image_info`)[
     A9N MicrokernelはELFやPEといった特定のExecutable Formatに依存しない．したがって，Kernelが起動する前のBootloader PhaseにおいてInit Serverを適切に展開しLoadする必要がある．
-    そのようにしてLoadされたInit Serverの情報はInit Image Info (cf., @a9n::boot_protocol::init_image_info) に格納されKernelに渡される．
+    そのようにしてLoadされたInit Serverの情報はInit Image Info（cf., @a9n::boot_protocol::init_image_info）に格納されKernelに渡される．
 ]
 
 #figure(
@@ -1860,7 +1745,7 @@ Boot InfoはKernelの起動に必要な情報を格納する構造体であり�
 
 #technical_term(name: `arch_info`)[
     Architecture InfoはArchitecture-SpecificなFieldであり，主にHALの起動に使用される．
-    また，殆どの場合Init Info (@a9n::init_protocol::init_info) の同名Fieldへ再格納される．
+    また，殆どの場合Init Info（@a9n::init_protocol::init_info）の同名Fieldへ再格納される．
 ]
 
 ==== x86_64
@@ -1878,7 +1763,7 @@ x86_64におけるBoot InfoのArchitecture Infoは以下のように定義され
 
 ==== Jump to Kernel
 
-Boot Info (cf., @a9n::boot_protocol::boot_info) はKernel Main Entry Pointへの引数として渡される必要がある．
+Boot Info（cf., @a9n::boot_protocol::boot_info）はKernel Main Entry Pointへの引数として渡される必要がある．
 Kernel Main Entry Pointは以下のように定義される (cf., @a9n::boot_protocol::kernel_entry)：
 
 #figure(
@@ -1933,8 +1818,7 @@ Kernel Main Entry Pointは以下のように定義される (cf., @a9n::boot_pro
 
 === Init Protocol <a9n::init_protocol>
 
-A9N MicrokernelはInit ServerをBoot Infoの情報をもとに生成し起動する．
-Init Serverに利用可能なCapabilityや初期状態を提供するため，Init Info構造体 (cf., @a9n::init_protocol::init_info) が定義される．
+A9N MicrokernelはInit ServerをBoot Infoの情報をもとに生成し起動する．Init Serverに利用可能なCapabilityや初期状態を提供するため，Init Info構造体（cf., @a9n::init_protocol::init_info）が定義される．
 
 #figure(
     ```cpp
@@ -1957,8 +1841,7 @@ Init Serverに利用可能なCapabilityや初期状態を提供するため，In
     caption: "A9N Init Info"
 ) <a9n::init_protocol::init_info>
 
-Generic Descriptor (cf., @a9n::init_protocol::generic_descriptor) はInit Serverが利用可能なGenericの情報を格納する構造体である．
-Generic DescriptorのIndexはそのままInit Slot Offset (cf., @a9n::init_protocol::init_slot_offset) で定義されたGeneric Node内のIndexとなる．
+Generic Descriptor（cf., @a9n::init_protocol::generic_descriptor) はInit Serverが利用可能なGenericの情報を格納する構造体である．Generic DescriptorのIndexはそのままInit Slot Offset (cf., @a9n::init_protocol::init_slot_offset）で定義されたGeneric Node内のIndexとなる．
 
 #figure(
     ```cpp
@@ -1972,8 +1855,7 @@ Generic DescriptorのIndexはそのままInit Slot Offset (cf., @a9n::init_proto
     caption: "Generic Descriptor"
 ) <a9n::init_protocol::generic_descriptor>
 
-Init Serverに限りKernelが初期状態としてRoot Nodeとその内容を提供する．
-Kernelが生成したCapabilityは以下のInit Slot Offset (cf., @a9n::init_protocol::init_slot_offset) に従い，Init ServerのRoot Nodeへ格納される：
+Init Serverに限りKernelが初期状態としてRoot Nodeとその内容を提供する．Kernelが生成したCapabilityは以下のInit Slot Offset（cf., @a9n::init_protocol::init_slot_offset）に従い，Init ServerのRoot Nodeへ格納される：
 
 #figure(
     normal_table(
@@ -1991,8 +1873,7 @@ Kernelが生成したCapabilityは以下のInit Slot Offset (cf., @a9n::init_pro
     caption: "Init Slot Offset"
 ) <a9n::init_protocol::init_slot_offset>
 
-特筆すべきはIndex[3]のProcess Root Nodeである．これは格納されているNode自体を表す再帰的なCapabilityである．
-Root Nodeに対する操作を直接実行することはできないが，このような手法を用いることですべてを操作可能とする．
+特筆すべきはIndex[3]のProcess Root Nodeである．これは格納されているNode自体を表す再帰的なCapabilityである．Root Nodeに対する操作を直接実行することはできないが，このような手法を用いることですべてを操作可能とする．
 
 #v(1em)
 
@@ -2000,8 +1881,7 @@ Init Infoの内容を書き込むAddressは簡単な計算で求めることが�
 
 === Build System <a9n::build_system>
 
-以前のA9N MicrokernelはMakefileによってBootloaderやInit Serverと統合してBuildされていたが，正しくが分割されておらず本質的にArchitecture-Dependentであった．
-これを解決するため，現在は構造化されたCMakeによってBuildされるように変更された．具体的な構成を以下に示す (cf., @a9n::build_system::cmake)：
+以前のA9N MicrokernelはMakefileによってBootloaderやInit Serverと統合してBuildされていたが，正しくが分割されておらず本質的にArchitecture-Dependentであった．これを解決するため，現在は構造化されたCMakeによってBuildされるように変更された．具体的な構成を以下に示す (cf., @a9n::build_system::cmake)：
 
 #figure(
     diagram(
@@ -2055,26 +1935,21 @@ Init Infoの内容を書き込むAddressは簡単な計算で求めることが�
     caption: "CMakeListsの構造"
 ) <a9n::build_system::cmake>
 
-Source CodeにおけるArchitecture-Dependentな部分のBuildは`src/hal/{arch}/CMakelists.txt`へ分離され，Toolchain-SpecificなToolchain Fileもまた`src/hal/{arch}/toolchain.cmake`へ分離された．
-これにより，構成する`CMakeLists.txt`の大半がArchitecture-Independentとなり，Portingが容易になった．
+Source CodeにおけるArchitecture-Dependentな部分のBuildは`src/hal/{arch}/CMakelists.txt`へ分離され，Toolchain-SpecificなToolchain Fileもまた`src/hal/{arch}/toolchain.cmake`へ分離された．これにより，構成する`CMakeLists.txt`の大半がArchitecture-Independentとなり，Portingが容易になった．
 
 #pagebreak()
 
 == Nun Operating System Frameworkの開発 <nun>
 
-A9N MicrokernelをコアとするOSを構築するためには，A9N Init Protocol (cf., @a9n::init_protocol) で示したProtocolに従ってInit Serverを構築する必要がある．
-これを容易かつSecureに実現するため，Rustを用いてOSを構築可能なNun Operating System Frameworkを開発した．
+A9N MicrokernelをコアとするOSを構築するためには，A9N Init Protocol（cf., @a9n::init_protocol）で示したProtocolに従ってInit Serverを構築する必要がある．これを容易かつSecureに実現するため，Rustを用いてOSを構築可能なNun Operating System Frameworkを開発した．
 
 === API Library <nun::api>
 
-Nun API LibraryはA9N MicrokernelにおけるABI規約 (cf., @a9n::abi) を満たしたKernel Callを実装するLibraryである，
-このLibraryはRustの恩恵を最大限に活かしたError Handlingと操作が可能であり，OSのModernな開発を実現する．
+Nun API LibraryはA9N MicrokernelにおけるABI規約（cf., @a9n::abi）を満たしたKernel Callを実装するLibraryである，このLibraryはRustの恩恵を最大限に活かしたError Handlingと操作が可能であり，OSのModernな開発を実現する．
 
 ==== Basic Types
 
-A9N Microkernelにおける基本型をRustにおける型として再定義する (cf., @nun::basic_types::types)．そのため，機能的にはC++における実装と同等である．
-RustのCoding Guidelineに従い，C++においてSnake Caseで表現されていた型はCamel Caseで実現される．
-これらはNun Module内に存在し，`nun::*`のように使用する．
+A9N Microkernelにおける基本型をRustにおける型として再定義する (cf., @nun::basic_types::types)．そのため，機能的にはC++における実装と同等である．RustのCoding Guidelineに従い，C++においてSnake Caseで表現されていた型はCamel Caseで実現される．これらはNun Module内に存在し，`nun::*`のように使用する．
 
 #figure(
     normal_table(
@@ -2087,7 +1962,7 @@ RustのCoding Guidelineに従い，C++においてSnake Caseで表現されて�
     caption: "Types"
 ) <nun::basic_types::types>
 
-また，以下の定数群 (cf., @nun::basic_types::constants) も同様に定義される．
+また，以下の定数群（cf., @nun::basic_types::constants）も同様に定義される．
 
 #figure(
     normal_table(
@@ -2130,10 +2005,7 @@ Nunを用いたOSのBuildには，Nunに統合されたCargoによるBuild Syste
 
 ==== Custom Target 
 
-NunにはBuild対象とするArchitecture用のCustom Targetが用意される．したがって，`cargo build --target {arch}-unknown-a9n`#footnote[正確には\ `cargo build --target Nun/arch/{arch}-unknown-a9n.json -Z build-std-features=compiler-builtins-mem --release
-`]によりBuildが可能となる．
-Custom TargetによってLinker ScriptやArchitecture-DependentなBuild Optionが自動的に適用される．
-現在，Targetとしてx86_64がSupportされている．
+NunにはBuild対象とするArchitecture用のCustom Targetが用意される．したがって，`cargo build --target {arch}-unknown-a9n`#footnote[正確には\ `cargo build --target Nun/arch/{arch}-unknown-a9n.json -Z build-std-features=compiler-builtins-mem --release`]によりBuildが可能となる．Custom TargetによってLinker ScriptやArchitecture-DependentなBuild Optionが自動的に適用される．現在，Targetとしてx86_64がSupportされている．
 
 ==== x86_64
 
@@ -2171,13 +2043,12 @@ x86_64におけるCustom Targetは以下のように定義される (cf., @nun::
 ) <nun::build_system::x86_64::custom_target>
 
 - Target TripleをLLVMの形式で指定する．
-- その他Target FieldはRustによって規定される形式 (cf., @RustC:2025) に沿い指定する．
+- その他Target FieldはRustによって規定される形式（cf., @RustC:2025）に沿い指定する．
 
 
 === Entry Point <nun::entry_point>
 
-NunはRustのStandard LibraryやStartup Runtimeを提供するものではない．
-そのため，Startupに必要なArchitecture-Dependentな処理とArchitecture-Independentな処理を適切に分配しつつEntry Pointを定義する機構を実装した．
+NunはRustのStandard LibraryやStartup Runtimeを提供するものではない．そのため，Startupに必要なArchitecture-Dependentな処理とArchitecture-Independentな処理を適切に分配しつつEntry Pointを定義する機構を実装した．
 
 `nun::entry!`はRustにおける宣言的Macroであり，() のように使用することでUser-DefinedなEntry Pointを指定できる．
 
@@ -2193,7 +2064,7 @@ NunはRustのStandard LibraryやStartup Runtimeを提供するものではない
     caption: "User-Defined Entry Point"
 )
 
-これは以下 (cf., @nun::entry_point::sequence) に示すFlowで処理を実現する．
+これは以下（cf., @nun::entry_point::sequence）に示すFlowで処理を実現する．
 
 #figure(
     diagram(
@@ -2227,8 +2098,7 @@ Nunを用いた最小なOSのコード例を付録に収録している（@nun::
 
 == KOITOの開発
 
-KOITOはNun (cf., @nun) を用いて開発されたA9N MicrokernelをコアとするOSである．Rustを用いてModernかつSecureに開発されている．
-実態としては下図 (cf., @koito::architecture)で示すような，User-Levelで動作するServer群を1つとして捉えたものである．
+KOITOはNun（cf., @nun）を用いて開発されたA9N MicrokernelをコアとするOSである．Rustを用いてModernかつSecureに開発されている．実態としては下図 (cf., @koito::architecture)で示すような，User-Levelで動作するServer群を1つとして捉えたものである．
 
 #figure(
     diagram(
@@ -2282,9 +2152,7 @@ KOITOはNun (cf., @nun) を用いて開発されたA9N Microkernelをコアと�
 
 ==== ACI
 
-KOITOはUser ApplicationとのInterfaceとしてACI (Application Capability Interface) を定義する．
-実行可能なContextごとにNodeの使用方法を定義することで，それぞれのUser Applicationについて共通の処理を実現する．
-現在のVersionにおけるACIは以下のように定義される (cf., @koito::aci)：
+KOITOはUser ApplicationとのInterfaceとしてACI（Application Capability Interface）を定義する．実行可能なContextごとにNodeの使用方法を定義することで，それぞれのUser Applicationについて共通の処理を実現する．現在のVersionにおけるACIは以下のように定義される (cf., @koito::aci)：
 
 #figure(
     ```rust
@@ -2305,49 +2173,39 @@ KOITOはUser ApplicationとのInterfaceとしてACI (Application Capability Inte
     caption: "KOITOの定義するACI"
 ) <koito::aci>
 
-このうち，特に注目すべきはOSPortである．
-Processの作成時，Root NodeのOffset: OSPortにはKOITO Serverと通信を行うためのIPC Portが格納され，Indentifier (cf., @a9n::ipc_port::identifier) としてProcess固有の値が設定される． これはPIDとしてKOITO Serverによって使用される．
+このうち，特に注目すべきはOSPortである．Processの作成時，Root NodeのOffset: OSPortにはKOITO Serverと通信を行うためのIPC Portが格納され，Indentifier（cf., @a9n::ipc_port::identifier）としてProcess固有の値が設定される． これはPIDとしてKOITO Serverによって使用される．
 
-このOSPortを切り変え宛先を変更することで，本質的にOSそのものを切り替えることが可能となる．したがって，KOITO Serverをもう一つ実行し隔離された状態で動作させることも可能である．
-他の活用例として，本来の通信先であるKOITO Serverの間に介在するようなProxy Serverを実装し，完全にUser-LevelでOS-Level System Callを監視することも可能である．
+このOSPortを切り変え宛先を変更することで，本質的にOSそのものを切り替えることが可能となる．したがって，KOITO Serverをもう一つ実行し隔離された状態で動作させることも可能である．他の活用例として，本来の通信先であるKOITO Serverの間に介在するようなProxy Serverを実装し，完全にUser-LevelでOS-Level System Callを監視することも可能である．
 
 === KOITO Server 
 
-KOITO Serverは所謂Init Serverであり，A9N Microkernelによって直接起動される．
-このServerはPOSIX ServerとULMM Server，そして幾つかのDevice Driver Severを起動し，その後KOITO Shellを起動する．
+KOITO Serverは所謂Init Serverであり，A9N Microkernelによって直接起動される．このServerはPOSIX ServerとULMM Server，そして幾つかのDevice Driver Severを起動し，その後KOITO Shellを起動する．
 
 KOITO ShellはOSとして最初の動作を決定するために使用される．通常ここからPOSIX Serverを用いてUser Applicationを実行するが，実験的機構をTestするためのDebug Consoleの役割も果たす．
 
 === User-Level Memory Management Server <koito::ulmm_server>
 
-KOITOはA9N Microkernelの提供するCapabilityを用いることで，SecureにUser-Level Memory Managementを実現する．
-その根幹をなすのがULMM Serverである．起動時，KOITO ServerはほぼすべてのGenericをULMM Serverに委譲する．
-ULMM ServerそれらGenericのConvert Policyを決定し，それに従ってMemory Allocationを行う．
+KOITOはA9N Microkernelの提供するCapabilityを用いることで，SecureにUser-Level Memory Managementを実現する．その根幹をなすのがULMM Serverである．起動時，KOITO ServerはほぼすべてのGenericをULMM Serverに委譲する．ULMM ServerそれらGenericのConvert Policyを決定し，それに従ってMemory Allocationを行う．
 
 IPCによってMemory Allocation Requestを受け取ると，ULMM ServerはConvert Policyに従いGenericをConvertし，生成したCapabilityのTransferを実行する (cf., @a9n::ipc_port::capability_transfer)．
 
 ==== SLAB Allocator
 
-ULMM ServerはRequestによりSLABとしてKernel Object用のGenericをBuddy Allocator (cf., @koito::ulmm::buddy) からAllocateする．言い換えると，Kernel Objectごとに分割されたGenericをAllocateする．
-これにより，Genericの特性を用いて(cf., @a9n::generic::log2_based_allocation) 半自動的にSLAB Allocatorが実装される．
+ULMM ServerはRequestによりSLABとしてKernel Object用のGenericをBuddy Allocator（cf., @koito::ulmm::buddy) からAllocateする．言い換えると，Kernel Objectごとに分割されたGenericをAllocateする．これにより，Genericの特性を用いて(cf., @a9n::generic::log2_based_allocation）半自動的にSLAB Allocatorが実装される．
 
 // TODO: いい感じの図を入れる
 
 ==== Buddy Allocator <koito::ulmm::buddy>
 
-ULMM ServerはBuddy Systemを用いたBuddy AllocatorをUser-Levelで実装する．
-Buddy Allocatorは2の累乗をベースとし，領域を再帰的に2分割していくことでFragmentationを抑えつつAllocationを実行するアルゴリズムである．
+ULMM ServerはBuddy Systemを用いたBuddy AllocatorをUser-Levelで実装する．Buddy Allocatorは2の累乗をベースとし，領域を再帰的に2分割していくことでFragmentationを抑えつつAllocationを実行するアルゴリズムである．
 
-KOITOでは，Capabilityを用いてGenericを$1/2$サイズの子Genericへ再帰的に分割していくことで実装される．
-ここで重要なのは，そのGenericを必ず再利用の単位として扱うことである．A9N Microkernelにおいて，Genericの再利用を行うにはそこから派生したCapabilityをすべて削除する必要がある (cf., @a9n::generic::deallocation)．
-そのため，割り当てる単位としてCapabilityとGenericのSizeを1:1で対応させることにより，Genericの結合処理を上位のGenericに対するRevoke操作と同等とする．
+KOITOでは，Capabilityを用いてGenericを$1/2$サイズの子Genericへ再帰的に分割していくことで実装される．ここで重要なのは，そのGenericを必ず再利用の単位として扱うことである．A9N Microkernelにおいて，Genericの再利用を行うにはそこから派生したCapabilityをすべて削除する必要がある (cf., @a9n::generic::deallocation)．そのため，割り当てる単位としてCapabilityとGenericのSizeを1:1で対応させることにより，Genericの結合処理を上位のGenericに対するRevoke操作と同等とする．
 
 // TODO: いい感じの図を入れる
 
 === POSIX Server <koito::posix_server>
 
-KOITOは限定的であるがPOSIX APIを提供するためのPOSIX Serverを実装する．
-POSIX Serverは基本的に`koito-libc`からのSystem Call Requestを受け取り，それに対応する操作を実行するものである (cf., @koito::posix_server::sequence)．
+KOITOは限定的であるがPOSIX APIを提供するためのPOSIX Serverを実装する．POSIX Serverは基本的に`koito-libc`からのSystem Call Requestを受け取り，それに対応する操作を実行するものである (cf., @koito::posix_server::sequence)．
 
 #figure(
     diagram(
@@ -2371,8 +2229,7 @@ POSIX Serverは基本的に`koito-libc`からのSystem Call Requestを受け取�
     caption: "POSIX Serverの略式Architecture"
 ) <koito::posix_server::sequence>
 
-POSIX ServerはProcess ManagementやMemory Management Frontend#footnote[BackendはULMM Serverである．]，及び標準入出力などの機構を提供する．
-必ずPOSIX ServerのみでRequestを完結させるわけではなく，必要に応じて他のServerへ処理が委譲される．
+POSIX ServerはProcess ManagementやMemory Management Frontend#footnote[BackendはULMM Serverである．]，及び標準入出力などの機構を提供する．必ずPOSIX ServerのみでRequestを完結させるわけではなく，必要に応じて他のServerへ処理が委譲される．
 
 現在，このPOSIX Serverには以下のSystem Callが定義されている (cf., @koito::posix_server::syscalls)：
 
@@ -2405,12 +2262,9 @@ POSIX ServerはProcess ManagementやMemory Management Frontend#footnote[Backend�
 
 ==== Standard C Library <koito::libc>
 
-KOITOはStandard C LibraryとしてKOITO libcを提供しているが，現状におけるKOITO libcのベースとなるのはNewlibである．
-NewlibはPortableなStandard C Libraryであり，Sytem Callの呼び出し部分をA9NとKOITOにおけるIPC Callに置き換えることで機能要件を達成する．
+KOITOはStandard C LibraryとしてKOITO libcを提供しているが，現状におけるKOITO libcのベースとなるのはNewlibである．NewlibはPortableなStandard C Libraryであり，Sytem Callの呼び出し部分をA9NとKOITOにおけるIPC Callに置き換えることで機能要件を達成する．
 
-NewlibはMakefileとAutoconfによってBuildされるが，これをModernizeしCMake Integrationを行った．
-この機構はOSに依存しないため，KOITOではない他のSystemに適用したい場合も使用可能である．
-Portingに必要なものを以下に示す：
+NewlibはMakefileとAutoconfによってBuildされるが，これをModernizeしCMake Integrationを行った．この機構はOSに依存しないため，KOITOではない他のSystemに適用したい場合も使用可能である．Portingに必要なものを以下に示す：
 
 #technical_term(name: `crt0`)[
     C Runtime．通常，Stack PointerやEnvironment Pointerを初期化し，引数を設定してから`main`へJumpするために使用される．
@@ -2430,23 +2284,17 @@ Portingに必要なものを以下に示す：
 
 == `liba9n`の開発
 
-通常，Kernelの開発においてはCやC++が選択される．しかし，これらの言語には安定性に欠かせないError Handling機構が不足している．
-まず，Cにおいては単なる整数をError型とし，値0を成功として扱うことが一般的である．この手法には問題があり，
-関数が事実上ただの整数型を返さなければならず，何らかの値が必要な場合にはPointerによる参照渡しを行う必要がある．というのも，`-1`をErrorとして扱う場合，仮に`-1`が正常値であったとしてもErrorとして判定されてしまうからである．
+通常，Kernelの開発においてはCやC++が選択される．しかし，これらの言語には安定性に欠かせないError Handling機構が不足している．まず，Cにおいては単なる整数をError型とし，値0を成功として扱うことが一般的である．この手法には問題があり，関数が事実上ただの整数型を返さなければならず，何らかの値が必要な場合にはPointerによる参照渡しを行う必要がある．というのも，`-1`をErrorとして扱う場合，仮に`-1`が正常値であったとしてもErrorとして判定されてしまうからである．
 
-では，Globalな`errno`を用いるのはどうだろうか？ これも考えてみればすぐに問題が見えてくる．
-MultiProcessor環境においてこの手法は危険である．したがって必ずLockが必要となるが，Lockの取得にはOverheadが存在するため，Performance-CriticalなKernelにおいては現実的でない．
+では，Globalな`errno`を用いるのはどうだろうか？ これも考えてみればすぐに問題が見えてくる．MultiProcessor環境においてこの手法は危険である．したがって必ずLockが必要となるが，Lockの取得にはOverheadが存在するため，Performance-CriticalなKernelにおいては現実的でない．
 
 C++の例外機構を用いるのも，ことKernel Heapを排除したCapability-Based Microkernelにおいては適切でない．例外機構にはDynamicなMemory Allocationが必要であり，暗黙的にKernel Heapを要求する．また，失敗時のUnwinding にかかるコストも無視できない．
 
-そこで，昨今のModernな言語が備える機構を基礎とした，Freestanding C++20用のError Handling Libraryである`liba9n`を開発した．
-`liba9n`はStandard C++ Libraryに依存せず，またDynamicなMemory Allocationを必要としない．したがって，Kernel Heapを持たず，なおかつ最小化したいMicrokernelに適している．
+そこで，昨今のModernな言語が備える機構を基礎とした，Freestanding C++20用のError Handling Libraryである`liba9n`を開発した．`liba9n`はStandard C++ Libraryに依存せず，またDynamicなMemory Allocationを必要としない．したがって，Kernel Heapを持たず，なおかつ最小化したいMicrokernelに適している．
 
 === `liba9n::std`
 
-`liba9n::std`は`libc++`のSubsetであり，Freestandingな環境のために再実装したものである．
-これには`liba9n::std::move`, `liba9n::std::forward`などの標準Utility関数や，`type_traits`といったMeta-Programming機構が含まれる．
-また，よく使用される`std::array`や，実験的なDynamic Memory Allocationを行わない`std::function`なども提供される．
+`liba9n::std`は`libc++`のSubsetであり，Freestandingな環境のために再実装したものである．これには`liba9n::std::move`, `liba9n::std::forward`などの標準Utility関数や，`type_traits`といったMeta-Programming機構が含まれる．また，よく使用される`std::array`や，実験的なDynamic Memory Allocationを行わない`std::function`なども提供される．
 
 === `liba9n::option<T>`
 
@@ -2458,27 +2306,25 @@ Haskellの`Maybe`やRustの`Option<T>`, Standard C++ Libraryの`std::optional<T>
 ==== Monadic Operation
 
 #technical_term(name: `and_then`)[
-    値が存在する場合 (`None`でない場合) のみ`option<T>`の持つ値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(T) -> option<T>`のような形をとる.
+    値が存在する場合（`None`でない場合) のみ`option<T>`の持つ値をCallbackに渡し，実行結果を返す．このとき，Callbackは`callback(T）-> option<T>`のような形をとる.
     値が存在しない場合は何も実行しない．
 ]
 
 #technical_term(name: `or_else`)[
-    値が存在しない場合 (`None`の場合) のみCallbackの実行結果を返す．このとき，Callbackは`callback(void) -> option<T>`のような形をとる．
+    値が存在しない場合（`None`の場合) のみCallbackの実行結果を返す．このとき，Callbackは`callback(void）-> option<T>`のような形をとる．
     値が存在する場合は何も実行しない．
 ]
 
 #technical_term(name: `transform`)[
-    値が存在する場合 (`None`でない場合) のみCallbackに渡し， 実行結果を`Option<U>`でWrapして返す．このとき, Callbackは`callback(T) -> U`のような形をとる．
+    値が存在する場合（`None`でない場合) のみCallbackに渡し， 実行結果を`Option<U>`でWrapして返す．このとき, Callbackは`callback(T）-> U`のような形をとる．
     値が存在しない場合は何も実行しない．
 ]
 
 === `liba9n::result<T, E>`
 
-`liba9n::result<T, E>`は，型をResultとする ── つまり，成功時には成功値を，失敗時にはError値を表現可能な型であり，
-Haskellの`Either`やRustの`Result<T, E>`, Standard C++ Libraryの`std::variant<T, E>`もしくは`std::expected<T, E>`に相当する．
+`liba9n::result<T, E>`は，型をResultとする ── つまり，成功時には成功値を，失敗時にはError値を表現可能な型であり，Haskellの`Either`やRustの`Result<T, E>`, Standard C++ Libraryの`std::variant<T, E>`もしくは`std::expected<T, E>`に相当する．
 
-この型は`T`と`E`が異なる型であることを要請する．類似のものと比較して柔軟度はやや低くなるが，関数からのReturn時に型を推論させ，Helper Functionを不要にすることができる．
-また，`liba9n::option<T>`と同様にMonadic OperationをSupportする．
+この型は`T`と`E`が異なる型であることを要請する．類似のものと比較して柔軟度はやや低くなるが，関数からのReturn時に型を推論させ，Helper Functionを不要にすることができる．また，`liba9n::option<T>`と同様にMonadic OperationをSupportする．
 
 ==== Monadic Operation
 
@@ -2508,16 +2354,11 @@ Tを`ok`とし，Eを`error`とする．
 
 === Conditionally Trivial Special Member Functions
 
-Kernel内部で使用する型は高速であることが要求される．そのため，可能な限りMemoryではなくRegisterを使用して値の受け渡しを実行したい．
-Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが可能であると定められる @ItaniumCppAbi．
-そのため，`liba9n::option<T>`と`liba9n::result<T, E>`ではTrivial性をMember型から引き継ぐためにConditionally Trivial Special Member Functions @P0848 を用いる．
-これにより，Trivialな型の場合は高速に扱うことが可能となる．
+Kernel内部で使用する型は高速であることが要求される．そのため，可能な限りMemoryではなくRegisterを使用して値の受け渡しを実行したい．Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが可能であると定められる @ItaniumCppAbi．そのため，`liba9n::option<T>`と`liba9n::result<T, E>`ではTrivial性をMember型から引き継ぐためにConditionally Trivial Special Member Functions @P0848 を用いる．これにより，Trivialな型の場合は高速に扱うことが可能となる．
 
 === `liba9n::not_null<T>`
 
-`liba9n::option<T>`や`liba9n::result<T, E>`には参照型を格納することができないが，Pointer型によって参照を扱うとNull Pointerを許容してしまう．
-型レベルで参照がNullでないことを保証するために`liba9n::not_null<T>`を実装した．
-この型は参照を値として保持するが，作成時に必ず参照を必要とする．したがって，ある程度の安全性を保証することができる．
+`liba9n::option<T>`や`liba9n::result<T, E>`には参照型を格納することができないが，Pointer型によって参照を扱うとNull Pointerを許容してしまう．型レベルで参照がNullでないことを保証するために`liba9n::not_null<T>`を実装した．この型は参照を値として保持するが，作成時に必ず参照を必要とする．したがって，ある程度の安全性を保証することができる．
 
 #pagebreak()
 
@@ -2525,11 +2366,8 @@ Itanium C++ ABIにおいて，Trivialな型はRegisterに格納することが�
 
 == A9NLoaderの開発
 
-A9NLoaderはA9N-BasedなSystem (x86_64) を起動するための統合Bootloaderである．
-EDK2を用いて開発されており，UEFI環境で動作する．
-A9N Boot Protocol (cf., @a9n::boot_protocol) に従ってA9N MicrokernelとInit ServerをLoadし，その後Kernelに制御を移す．
+A9NLoaderはA9N-BasedなSystem（x86_64) を起動するための統合Bootloaderである．EDK2を用いて開発されており，UEFI環境で動作する．A9N Boot Protocol (cf., @a9n::boot_protocol）に従ってA9N MicrokernelとInit ServerをLoadし，その後Kernelに制御を移す．
 
 === CMake Integration
 
-EDK2は独自のBuild Systemを持つが，これはCMakeによってWrapされIntegrationされる．
-そのため，A9NLoaderのBuild Commandは`mkdir build && cmake -B build && cmake --build build`#footnote[Out-of-Source Build]のようにSimpleとなる．
+EDK2は独自のBuild Systemを持つが，これはCMakeによってWrapされIntegrationされる．そのため，A9NLoaderのBuild Commandは`mkdir build && cmake -B build && cmake --build build`#footnote[Out-of-Source Build]のようにSimpleとなる．

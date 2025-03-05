@@ -9,15 +9,11 @@
     ]
 ) <a9n_logo>
 
-A9N Microkernel (@a9n_logo) は既存Systemの課題を解決するために設計された, HALによる移植容易性を持つMicrokernelである．
-Object-Capability ModelによるCapability-Based Securityを採用し，抽象Memory CapabilityによるSecureなUser-Level Memory Managementを可能とする．
-また，高速なIPC機構によるLow-Latencyな通信を実現する．
+A9N Microkernel（@a9n_logo）は既存Systemの課題を解決するために設計された, Hardware Abstraction Layer（HAL）による移植容易性を持つMicrokernelである．Object-Capability ModelによるCapability-Based Securityを採用し，抽象Memory CapabilityによるSecureなUser-Level Memory Managementを可能とする．また，高速なIPC機構によるLow-Latencyな通信を実現する．
 
 == Nun Operating System Framework
 
-NunはA9N Microkernel上にOSを構築するためのRust製Frameworkである．
-KernelはInit ProtocolをもってInitial Serverを起動するが，このFrameworkはそのProtocolに沿うOSを構築するために最小限の抽象化を提供する．
-Rustを用いることでType SafetyやMemory Safetyを保証し，またCargoによる優れたBuild Systemを享受できる．
+NunはA9N Microkernel上にOSを構築するためのRust製Frameworkである．KernelはInit ProtocolをもってInitial Serverを起動するが，このFrameworkはそのProtocolに沿うOSを構築するために最小限の抽象化を提供する．Rustを用いることでType SafetyやMemory Safetyを保証し，またCargoによる優れたBuild Systemを享受できる．
 
 == KOITO
 
@@ -29,9 +25,7 @@ Rustを用いることでType SafetyやMemory Safetyを保証し，またCargo�
     gap: 2em
 ) <koito_logo>
 
-KOITO (@koito_logo) はNunによって実装される，A9N Microkernel上で動作するOSである．
-A9Nによって提供されるMechanismを用い，それに対応するPolicyを実装するLayerといえる．
-実態としては複数のServerで実現される抽象概念であり，Initial Server, POSIX Compatible Server, User-Level Memory Management Serverによって構成される．
+KOITO（@koito_logo）はNunによって実装される，A9N Microkernel上で動作するOSである．A9Nによって提供されるMechanismを用い，それに対応するPolicyを実装するLayerといえる．実態としては複数のServerで実現される抽象概念であり，Initial Server, POSIX Compatible Server, User-Level Memory Management Serverによって構成される．
 
 == `liba9n`
 
@@ -43,5 +37,4 @@ A9Nによって提供されるMechanismを用い，それに対応するPolicy�
 
 == A9NLoader
 
-A9NLoaderはA9N Boot Protocol(x86_64)に準拠したBoot LoaderのEDK2によるReference Implementationである．UEFI搭載のComputer上でA9N MicrokernelとInit Protocolに準拠したInit ServerをMemory上にLoadする．
-その後，KernelへControlを委譲してSystem全体のEntry Pointとする．
+A9NLoaderはA9N Boot Protocol(x86_64)に準拠したBoot LoaderのEDK2によるReference Implementationである．UEFI搭載のComputer上でA9N MicrokernelとInit Protocolに準拠したInit ServerをMemory上にLoadする．その後，KernelへControlを委譲してSystem全体のEntry Pointとする．

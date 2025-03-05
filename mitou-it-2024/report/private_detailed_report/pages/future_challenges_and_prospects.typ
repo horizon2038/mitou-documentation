@@ -17,7 +17,7 @@ Test Codeを実行するためのHAL実装は存在しているが，これはPo
 
 == User-Level Virtual Machine Monitor
 
-Virtualization Extensionである各Capability (i.e., Virtual CPU, Virtual Address Space, Virtual Page Table) についての実装はある程度進んでいる一方で未だ未完成である．というのも，何度も手戻りが発生し3回以上のAPI再設計を実施したためである．
+Virtualization Extensionである各Capability（i.e., Virtual CPU, Virtual Address Space, Virtual Page Table）についての実装はある程度進んでいる一方で未だ未完成である．というのも，何度も手戻りが発生し3回以上のAPI再設計を実施したためである．
 また，この不安定なVirtualization APIのUserであるVMMの実装も当然ながら未完成である．
 ただし，現在API設計は現在ほぼ完了し成熟へ向かっている．また，Virtualization機構を実際に使用するHAL内の実装もほぼ完了している．
 したがって，数週間以内には簡易的なVMMの実装を完了し，Linuxを動作させることを目指す．
