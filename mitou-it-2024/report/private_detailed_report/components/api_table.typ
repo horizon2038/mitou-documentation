@@ -11,7 +11,7 @@
         columns: 3,
         inset: (
             x: 1.5em,
-            y: 1em,
+            y: 0.75em,
         ),
         align: (x, y) => ((left + horizon), (left + horizon), left).at(x),
 
@@ -53,7 +53,7 @@
         columns: 2,
         inset: (
             x: 1.5em,
-            y: 1em,
+            y: 0.75em,
         ),
         align: (x, y) => ((left + horizon), (left + horizon), left).at(x),
 

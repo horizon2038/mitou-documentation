@@ -3,10 +3,10 @@
         #set align(left)
         *#name*
         #linebreak()
-        #pad(left: 1em)[
+        #pad(left: 2em)[
             #description
         ]
     ]
-    v(0.5em)
+    v(1em)
 }
 

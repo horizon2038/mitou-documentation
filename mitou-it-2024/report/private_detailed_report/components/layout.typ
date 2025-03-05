@@ -77,9 +77,9 @@
 
     // figure settings
     show figure: it => {
-        v(1em)
+        v(0.5em)
         it
-        v(1em)
+        v(0.5em)
     }
 
     // font settings

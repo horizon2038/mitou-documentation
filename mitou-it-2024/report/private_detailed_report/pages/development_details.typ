@@ -238,10 +238,12 @@ Capability Nodeは効率のためにRadix Page Tableをベースとした木構�
 
 Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，この具象となる実装を呼び出すことでCapability Nodeを探索し，対象のCapability Slotを取得することができる．
 
-==== `capability_node::retrieve_slot`#footnote()[`capability_component::retrieve_slot`の実装]
+==== `capability_node::retrieve_slot`
+このメソッドは`capability_component::retrieve_slot`によって定義されるInterfaceの実装である．
 `retrieve_slot`は引数に指定されたIndexに対応するSlotを返す．これは単なる配列アクセスに等しい．
 
-==== `capability_node::traverse_slot`#footnote()[`capability_component::traverse_slot`の実装]
+==== `capability_node::traverse_slot`
+このメソッドは`capability_component::traverse_slot`によって定義されるInterfaceの実装である．
 `traverse_slot`Node間の再帰的な探索であり，以下のように実装される:
 + Capability DescirptorからDescriptor Used Bits分をSkipした箇所からNodeのRadix Bits分を取り出し（@a9n::capability_node::calculate_capability_index），Node Indexとする．
 + Node Indexを用いてSlotを取得し，次の探査対象とする．
@@ -249,22 +251,22 @@ Capability Componentは`retrieve_slot`と`traverse_slot`を定義するが，こ
 
 #figure(
     ```cpp
-inline const a9n::word capability_node::calculate_capability_index(
-    a9n::capability_descriptor descriptor,
-    a9n::word                  descriptor_used_bits
-)
-{
-    // index用のmask baseを計算する．
-    auto mask_bits  = static_cast<a9n::word>((1 << radix_bits) - 1);
-    // descriptorからradix bitsを取り出すためのshift bitsを計算する．
-    // このshift bitsはdescriptorから未使用bitを取り出すために使用する;
-    // 要するに使用済みbitをskipする．
-    auto shift_bits = (a9n::WORD_BITS -
-        (ignore_bits + radix_bits + descriptor_used_bits)
-    );
-    // 未使用bitの先頭からradix bitsを取り出しindexとする．
-    return（descriptor >> shift_bits）& mask_bits;
-}
+    inline const a9n::word capability_node::calculate_capability_index(
+        a9n::capability_descriptor descriptor,
+        a9n::word                  descriptor_used_bits
+    )
+    {
+        // index用のmask baseを計算する．
+        auto mask_bits  = static_cast<a9n::word>((1 << radix_bits) - 1);
+        // descriptorからradix bitsを取り出すためのshift bitsを計算する．
+        // このshift bitsはdescriptorから未使用bitを取り出すために使用する;
+        // 要するに使用済みbitをskipする．
+        auto shift_bits = (a9n::WORD_BITS -
+            (ignore_bits + radix_bits + descriptor_used_bits)
+        );
+        // 未使用bitの先頭からradix bitsを取り出しindexとする．
+        return（descriptor >> shift_bits）& mask_bits;
+    }
     ```,
     caption: "Node Indexの取得",
 ) <a9n::capability_node::calculate_capability_index>
@@ -273,7 +275,7 @@ Node以外のCapability Component実装は，`retrieve_slot`や`traverse_slot`�
 
 ==== Addressing <a9n::capability_node::addressing>
 
-Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@a9n::capability_descriptor)，Capability Nodeの探索上限を示す．
+Capability Callの実行時，対象となるCapabilityは指定されたCapability Descriptorを用いて暗黙のうちにRoot Capability Nodeから探索される．Userが指定したCapability Descriptorの先頭8bitはDepth Bitsであり (@a9n::capability_descriptor)，Capability Nodeの探索上限を示す．ここでは簡略化のために64bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．
 
 #figure(
     bytefield(
@@ -291,7 +293,7 @@ Capability Callの実行時，対象となるCapabilityは指定されたCapabil
 
         text-size: 4pt,
     ),
-    caption: [Userが指定するCapability Descriptorの構造#footnote()[簡略化のために64bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]],
+    caption: [Userが指定するCapability Descriptorの構造],
 ) <a9n::capability_descriptor>
 
 Addressing機構は先述したようにRadix Page Tableをベースとしているが，具体例を示すことで理解の助けとする．
@@ -401,7 +403,7 @@ $ log_2(64) = 6 $
     caption: "Capability構成の例"
 ) <a9n::capability_node::example>
 
-ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは（@a9n::capability_node::example::target_descriptor）のようになる#footnote()[簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．]:
+ここで, $"Capability"_"Target"$を対象としてCapability Callを実行したい場合を考えると，Capability Descriptorは（@a9n::capability_node::example::target_descriptor）のようになる．ここでは簡略化のために32bit ArchitectureにおけるDescriptorを例示しているが，異なるWord幅のArchitectureにおいても同様の構造をとる．
 
 //   0001 1000 = 0x24 (depth)
 //   0000 0011 = 0x02 (node_0)
@@ -479,48 +481,63 @@ Depth BitsはNodeのような非終端のCapabilityを指定するために使�
         "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
         "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
     ),
-    caption: "capability_node::copy",
+    caption: [`copy`の引数],
 ) <a9n::capability_node::copy>
 
 #technical_term(name: `move`)[CapabilityのMoveを実行する．RightsはそのままMoveされる．]
 
-#api_table(
-    "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
-    "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
-    "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
-    "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
+#figure(
+    api_table(
+        "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
+        "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
+        "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
+        "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
+    ),
+    caption: [`move`の引数]
 ) <a9n::capability_node::move>
 
 #technical_term(name: `mint`)[CapabilityのMintを実行する．新しいRightsは元となるRightsのSubsetである必要がある．]
 
-#api_table(
-    "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
-    "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
-    "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
-    "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
-    "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+#figure(
+    api_table(
+        "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
+        "word", "destination_index", "DestinationとなるCapabilityを格納しているNode内Index",
+        "capability_descriptor", "source_descriptor", "SourceとなるNodeのDescriptor",
+        "word", "source_index", "SourceとなるNodeのCapabilityを格納しているIndex",
+        "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+        ),
+        caption: [`mint`の引数]
 ) <a9n::capability_node::mint>
 
 #technical_term(name: `demote`)[Capability Rightsを不可逆的に降格する．新しいRightsは元となるRightsのSubsetである必要がある．]
 
-#api_table(
-    "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
-    "word", "target_index", "対象のCapabilityを格納しているNode内Index",
-    "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+#figure(
+    api_table(
+        "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
+        "word", "target_index", "対象のCapabilityを格納しているNode内Index",
+        "capability_rights", "new_rights", "新しいRights (cf., @a9n::capability_rights)",
+    ),
+    caption: [`demote`の引数]
 ) <a9n::capability_node::demote>
 
 #technical_term(name: `remove`)[CapabilityをSlotから削除する．Dependency Nodeに兄弟が存在しない場合，Revokeを実行してから削除する．]
 
-#api_table(
-    "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
-    "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
+#figure(
+    api_table(
+        "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
+        "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
+    ), 
+    caption: [`remove`の引数]
 ) <a9n::capability_node::remove>
 
 #technical_term(name: `revoke`)[Capabilityを初期化/無効化する．] 
 
-#api_table(
-    "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
-    "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
+#figure(
+    api_table(
+        "capability_descriptor", "node_descriptor", "対象Capability NodeへのDescriptor",
+        "word", "target_index", "削除対象のCapabilityを格納しているNode内Index"
+    ),
+    caption: [`revoke`の引数]
 ) <a9n::capability_node::revoke>
 
 
@@ -587,13 +604,16 @@ Genericの再利用には，ConvertされたすべてのCapabilityをRemoveす�
 
 #technical_term(name: `convert`)[Generic Capabilityの領域を指定されたCapability Typeに変換する．]
 
-#api_table(
-    "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
-    "capability_type", "type", "生成するCapabilityのType",
-    "word", "specific_bits", [Capability生成時に使用する固有Bits \ cf., @a9n::generic::specific_bits],
-    "word", "count", "生成するCapabilityの個数",
-    "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
-    "word", "node_index", "格納先NodeのIndex",
+#figure(
+    api_table(
+        "capability_descriptor", "generic_descriptor", "対象GenericへのDescriptor",
+        "capability_type", "type", "生成するCapabilityのType",
+        "word", "specific_bits", [Capability生成時に使用する固有Bits \ cf., @a9n::generic::specific_bits],
+        "word", "count", "生成するCapabilityの個数",
+        "capability_descriptor", "node_descriptor", "格納先NodeへのDescriptor",
+        "word", "node_index", "格納先NodeのIndex",
+    ),
+    caption: [`convert`の引数]
 )
 
 Specific Bits（@a9n::generic::specific_bits）はCapability Type依存の初期化に使用する値である．例えば，Capability NodeをConvertする時に指定するSpecific BitsはNodeのRadixとなる．
@@ -614,7 +634,7 @@ Specific Bits（@a9n::generic::specific_bits）はCapability Type依存の初期
         "Virtual Address Space", "-",
         "Virtual Page Table", "-",
     ),
-    caption: "generic::specific_bits",
+    caption: [`specific_bits`の定義],
 ) <a9n::generic::specific_bits>
 
 #pagebreak()
@@ -629,19 +649,25 @@ Address Space CapabilityにはPage Table CapabilityやFrame CapabilityをMapping
 
 #technical_term(name: `map`)[Page TableやFrameをVirtual Address SpaceにMapする．]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
-    "capability_descriptor", "memory_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
-    "virtual_address", "address", "MapするVirtual Address",
-    "memory_attribute", "attribute", "Mapに使用する属性",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
+        "capability_descriptor", "memory_descriptor", "対象にMapするPage TableもしくはFrameへのDescriptor",
+        "virtual_address", "address", "MapするVirtual Address",
+        "memory_attribute", "attribute", "Mapに使用する属性",
+    ),
+    caption: [`map`の引数]
 )
 
 #technical_term(name: `unmap`)[Page TableやFrameをVirtual Address SpaceからUnmapする．]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
-    "capability_descriptor", "memory_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
-    "virtual_address", "address", "UnmapするVirtual Address",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Address SpaceへのDescriptor",
+        "capability_descriptor", "memory_descriptor", "対象からUnmapするPage TableもしくはFrameへのDescriptor",
+        "virtual_address", "address", "UnmapするVirtual Address",
+    ),
+    caption: [`unmap`の引数]
 )
 
 #technical_term(name: `get_unset_depth`)[Address SpaceにVirtual AddressをMapするうえで，まだMapされていないPage TableのDepthを取得する．]
@@ -719,26 +745,19 @@ Process Control BlockにはいくつかのCapabilityをConfigurationすること
 #v(1em)
 
 #technical_term(name: "Root Node")[
-    Process Control Blockが使用するRootとなるCapability Node．
-    このProcess Control BlockがCapability Callを実行したとき，指定されたCapability DescriptorはRoot Nodeを起点に探索される．
+    Process Control Blockが使用するRootとなるCapability Node．このProcess Control BlockがCapability Callを実行したとき，指定されたCapability DescriptorはRoot Nodeを起点に探索される．
 ]
 
 #technical_term(name: "Root Address Space")[
-    Process Control BlockのVirtual Address Spaceが規定されるAddress Space Capability．
-    このCapabilityを起点としてAddress SpaceのSwitchが行われ，またVirtual Memory Managementが実現される．
+    Process Control BlockのVirtual Address Spaceが規定されるAddress Space Capability．このCapabilityを起点としてAddress SpaceのSwitchが行われ，またVirtual Memory Managementが実現される．
 ]
 
 #technical_term(name: "Buffer Frame")[
-    IPC Bufferとして使用するFrame Capability．
-    Frame Capabilityを用いることでBufferの存在を保証できる．したがって，安全にKernel-User間のCommunicationを実現できる．
+    IPC Bufferとして使用するFrame Capability．Frame Capabilityを用いることでBufferの存在を保証できる．したがって，安全にKernel-User間のCommunicationを実現できる．
 ]
 
 #technical_term(name: "Resolver Port")[
-    Process Control Blockの実行中にExceptionが発生した場合に，そのStatusをFault Callとして送信するためのIPC Port Capability．
-    Exception Status Messageを受信した対象はその内容に応じて適切な処理を行い，Exceptionの発生元を再開できる．
-    Exceptionの発生時にResolver Portが設定されていない場合はDouble Faultとして動作を停止する．
-
-    // TODO: いい感じの図を作る
+    Process Control Blockの実行中にExceptionが発生した場合に，そのStatusをFault Callとして送信するためのIPC Port Capability．Exception Status Messageを受信した対象はその内容に応じて適切な処理を行い，Exceptionの発生元を再開できる．Exceptionの発生時にResolver Portが設定されていない場合はDouble Faultとして動作を停止する．
 ]
 
 Process Control Blockに必要なCapabilitiyをConfiguration後#footnote[Root Address Spaceは必須だが，その他のCapabilityはあくまでもOptionalである]，Resume操作を実行することでSchedulerのQueueに登録される．Benno Schedulerは前述の通り実行可能なContextのみをQueueとして持つため，PriorityやTime Sliceが考慮されたあとに実行が行われる．
@@ -747,19 +766,22 @@ Process Control Blockに必要なCapabilitiyをConfiguration後#footnote[Root Ad
 
 #technical_term(name: `configure`)[Process Control BlockをConfigurationする．]
 
-#api_table(
-    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
-    "configuration_info", "info", [cf., @a9n::process_control_block::configuration_info],
-    "capability_descriptor", "root_page_table", "Root Page TableへのDescriptor",
-    "capability_descriptor", "root_node", "Root NodeへのDescriptor",
-    "capability_descriptor", "frame_ipc_buffer", "IPC BufferとしたいFrameへのDescriptor",
-    "capability_descriptor", "notification_port", "Notification PortへのDescriptor",
-    "capability_descriptor", "ipc_port_resolver", "ResolverとしたいIPC PortのDescriptor",
-    "virtual_address", "instruction_pointer", "Instruction Pointer",
-    "virtual_address", "stack_pointer", "Stack Pointer",
-    "virtual_address", "thread_local_base", "Thread Local Base",
-    "word", "priority", "優先度",
-    "word", "affinity", "SMP環境におけるAffinity (CPU CoreのIndex)",
+#figure(
+    api_table(
+        "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+        "configuration_info", "info", [cf., @a9n::process_control_block::configuration_info],
+        "capability_descriptor", "root_page_table", "Root Page TableへのDescriptor",
+        "capability_descriptor", "root_node", "Root NodeへのDescriptor",
+        "capability_descriptor", "frame_ipc_buffer", "IPC BufferとしたいFrameへのDescriptor",
+        "capability_descriptor", "notification_port", "Notification PortへのDescriptor",
+        "capability_descriptor", "ipc_port_resolver", "ResolverとしたいIPC PortのDescriptor",
+        "virtual_address", "instruction_pointer", "Instruction Pointer",
+        "virtual_address", "stack_pointer", "Stack Pointer",
+        "virtual_address", "thread_local_base", "Thread Local Base",
+        "word", "priority", "優先度",
+        "word", "affinity", "SMP環境におけるAffinity (CPU CoreのIndex)",
+    ),
+    caption: [`configure`の引数]
 )
 
 Performanceのため，Process Control Blockにおける各ParameterはConfiguration Info (@a9n::process_control_block::configuration_info)によって一括してConfigurationできる．
@@ -790,7 +812,7 @@ Performanceのため，Process Control Blockにおける各ParameterはConfigura
 
         text-size: 4pt,
     ),
-    caption: "Configuration Info"
+    caption: [`configuration_info`の構造]
 ) <a9n::process_control_block::configuration_info>
 
 Configuration Infoの各BitがそれぞれのFieldに対応する．このBitが立っている場合，そのFieldがConfigurationされる．逆に言えば，立っていない場合そのFieldに対応する引数は無視される．
@@ -823,22 +845,31 @@ Configuration Infoの各BitがそれぞれのFieldに対応する．このBitが
     Message RegisterのIndex:3からIndex:nを読み出し，対象Process Control BlockのRegisterに書き込む．
 ]
 
-#api_table(
-    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
-    "word", "register_count", "書き込むRegisterの数",
-    "word[n]", "registers", "書き込むRegisterの値",
+#figure(
+    api_table(
+        "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+        "word", "register_count", "書き込むRegisterの数",
+        "word[n]", "registers", "書き込むRegisterの値",
+    ),
+    caption: [`write_register`の引数]
 )
 
 #technical_term(name: `resume`)[Process Control Blockを実行可能状態にし，SchedulerのQueueに追加する．]
 
-#api_table(
-    "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+    ),
+    caption: [`resume`の引数]
 )
 
 #technical_term(name: `suspend`)[Process Control Blockを休止状態にする#footnote[休止状態のProcess Control BlockはQueueに追加されない．したがって，明示的に再開するまで実行されない．]．]
 
-#api_table(
-    "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "pcb_descriptor", "対象Process Control BlockへのDescriptor",
+    ),
+    caption: [`suspend`の引数]
 )
 
 #pagebreak()
@@ -1104,7 +1135,7 @@ Capability Transferは必ずIPC Bufferを介して行われるため，Virtual M
         flag[KERNEL],
         text-size: 4pt,
     ),
-    caption: "Message Info"
+    caption: [`message_info`の構造]
 ) <a9n::ipc_port::message_info>
 
 #normal_table(
@@ -1123,9 +1154,12 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #technical_term(name: `send`)[IPC PortにMessageを送信する．]
 
-#api_table(
-    "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-    "message_info", "info", [送信するMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+        "message_info", "info", [送信するMessageの情報 \ (cf., @a9n::ipc_port::message_info)],
+    ),
+    caption: [`send`の引数]
 )
 
 #technical_term(name: `receive`)[IPC PortからMessageを受信する．]
@@ -1167,9 +1201,12 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #technical_term(name: `reply`)[IPC Portに対してReplyを実行する．]
 
-#api_table(
-    "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
-    "message_info", "info", [送信（Reply）するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)]
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", [対象IPC PortへのDescriptor#footnote[前述したように，Reply時に指定するIPC PortはどのIPC Portでも機能する．]],
+        "message_info", "info", [送信（Reply）するMessageの \ 情報 (cf., @a9n::ipc_port::message_info)]
+    ),
+    caption: [`reply`の引数]
 )
 
 #technical_term(name: `reply_receive`)[IPC Portに対してReply Receiveを実行する．]
@@ -1193,9 +1230,12 @@ A9N MicrokernelにおけるIPCは第一級のKernel Callではなく，あくま
 
 #technical_term(name: `identify`)[IPC Portに対してSlot-LocalなIdentifierを設定する．]
 
-#api_table(
-    "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
-    "word", "identifier", "IPC Portに付与するIdentifier",
+#figure(
+    api_table(
+        "descriptor", "ipc_port_descriptor", "対象IPC PortへのDescriptor",
+        "word", "identifier", "IPC Portに付与するIdentifier",
+    ),
+    caption: [`identify`の引数]
 )
 
 #pagebreak()
@@ -1214,8 +1254,11 @@ IPC PortのIdentifier（cf., @a9n::ipc_port::identifier）と同じIdentifier機
     Notification Portに対してNotificationを送信する．Slot-LocalなIdentifierはNotification Flag FieldにBitwise ORされる．
 ]
 
-#api_table(
-    "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor"
+#figure(
+    api_table(
+        "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor"
+    ),
+    caption: [`notify`の引数]
 )
 
 #technical_term(name: `wait`)[
@@ -1260,9 +1303,12 @@ IPC PortのIdentifier（cf., @a9n::ipc_port::identifier）と同じIdentifier機
 
 #technical_term(name: `identify`)[Notification Portに対してSlot-LocalなIdentifierを設定する．]
 
-#api_table(
-    "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor",
-    "word", "identifier", "IPC Portに付与するIdentifier"
+#figure(
+    api_table(
+        "descriptor", "notification_port_descriptor", "対象Notification PortへのDescriptor",
+        "word", "identifier", "IPC Portに付与するIdentifier"
+    ),
+    caption: [`identify`の引数]
 )
 
 #pagebreak()
@@ -1305,11 +1351,14 @@ Interrupt Regionは割り込みを抽象化するInterrupt Portを生成する�
     この操作によって生成されるInterrupt PortはIRQ Numberごとに一意である．
 ]
 
-#api_table(
-    "descriptor", "interrupt_region_descriptor", "対象Interrupt RegionへのDescriptor",
-    "word", "irq_number", "生成するInterrupt PortのIRQ Number",
-    "capability_descriptor", "node_descriptor", "Interrupt Portを格納するNodeへのDescriptor",
-    "word", "index", "Interrupt Portを格納するNodeのIndex (Offset)",
+#figure(
+    api_table(
+        "descriptor", "interrupt_region_descriptor", "対象Interrupt RegionへのDescriptor",
+        "word", "irq_number", "生成するInterrupt PortのIRQ Number",
+        "capability_descriptor", "node_descriptor", "Interrupt Portを格納するNodeへのDescriptor",
+        "word", "index", "Interrupt Portを格納するNodeのIndex (Offset)",
+    ),
+    caption: [`make_port`の引数]
 )
 
 #pagebreak()
@@ -1348,25 +1397,34 @@ Interrupt PortはInterrupt Regionから生成されるCapabilityである．特�
     割り込み発生時，このNotification PortへNotificationが送信される．
 ]
 
-#api_table(
-    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
-    "capability_descriptor", "notification_port", "BindするNotification PortへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+        "capability_descriptor", "notification_port", "BindするNotification PortへのDescriptor"
+    ),
+    caption: [`bind`の引数]
 )
 
 #technical_term(name: `unbind`)[
     Interrupt PortにBindされているNotification PortをUnbindする．
 ]
 
-#api_table(
-    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor"
+    ),
+    caption: [`unbind`の引数]
 )
 
 #technical_term(name: `ack`)[
     Interrupt Portに対して割り込みをAckする．この操作によって割り込みを再度有効化する．
 ]
 
-#api_table(
-    "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "interrupt_port", "対象Interrupt PortへのDescriptor"
+    ),
+    caption: [`ack`の引数]
 )
 
 #technical_term(name: `get_irq_number`)[
@@ -1444,21 +1502,27 @@ IO PortはIO Address Regionを持ち，この範囲のAddressに対してのみ�
     IO Portに値をWriteする．
 ]
 
-#api_table(
-    "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
-    "word", "data", "IO PortにWriteする値",
+#figure(
+    api_table(
+        "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
+        "word", "data", "IO PortにWriteする値",
+    ),
+    caption: [`write`の引数]
 )
 
 #technical_term(name: `mint`)[
     IO PortのSubsetを生成する．
 ]
 
-#api_table(
-    "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
-    "word", "new_address_min", "生成するSubsetの最低Address",
-    "word", "new_address_max", "生成するSubsetの最高Address",
-    "capability_descriptor", "node_descriptor", "生成したSubsetを格納するNodeへのDescriptor",
-    "word", "index", "生成したSubsetを格納するNodeのIndex (Offset)",
+#figure(
+    api_table(
+        "capability_descriptor", "io_port_descriptor", "対象IO PortへのDescriptor",
+        "word", "new_address_min", "生成するSubsetの最低Address",
+        "word", "new_address_max", "生成するSubsetの最高Address",
+        "capability_descriptor", "node_descriptor", "生成したSubsetを格納するNodeへのDescriptor",
+        "word", "index", "生成したSubsetを格納するNodeのIndex (Offset)",
+    ),
+    caption: [`mint`の引数]
 )
 
 #pagebreak()
@@ -1487,16 +1551,22 @@ Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQ�
     Virtual CPUとContextをBindし，Virtual Machineの実行を開始する．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    ),
+    caption: [`enter`の引数]
 )
 
 #technical_term(name: `exit`)[
     実行中のVirtual Machineを外部から中断し制御を返す．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+    ),
+    caption: [`exit`の引数]
 )
 
 #technical_term(name: `read_state`)[
@@ -1523,19 +1593,25 @@ Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQ�
     Virtual CPUの状態を書き込む．
 ]
 
-#api_table(
-    "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
-    "word", "state_descriptor", "書き込むFieldを示すState Descriptor",
-    "word[n]", "fields", "書き込むFIeldの値",
+#figure(
+    api_table(
+        "capability_descriptor", "process_control_block", "対象Process Control BlockへのDescriptor",
+        "word", "state_descriptor", "書き込むFieldを示すState Descriptor",
+        "word[n]", "fields", "書き込むFIeldの値",
+    ),
+    caption: [`write_state`の引数]
 )
 
 #technical_term(name: `inject_irq`)[
     Virtual IRQをInjectする．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
-    "word", "irq_number", "InjectするIRQ Number",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+        "word", "irq_number", "InjectするIRQ Number",
+    ),
+    caption: [`inject_irq`の引数]
 )
 
 
@@ -1543,28 +1619,37 @@ Virtual CPUはVirtual IRQをInjectすることができる．InjectされたIRQ�
     Virtual CPUのAddress Spaceを設定する．このAddress SpaceはHostとGuestのPhysical Address SpaceをMappingする．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
-    "capability_descriptor", "virtual_address_space", "BindするVirtual Address SpaceへのDescriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+        "capability_descriptor", "virtual_address_space", "BindするVirtual Address SpaceへのDescriptor",
+    ),
+    caption: [`configure_address_space`の引数]
 )
 
 #technical_term(name: `configure_state_descriptor`)[
     Virtual CPU State Descriptorを設定する．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
-    "word", "exit_reason", "State Descriptorを設定するExit Reason",
-    "word", "target_state_descriptor", "Exit ReasonにLinkさせるState Descriptor",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+        "word", "exit_reason", "State Descriptorを設定するExit Reason",
+        "word", "target_state_descriptor", "Exit ReasonにLinkさせるState Descriptor",
+    ),
+    caption: [`configure_state_descriptor`の引数]
 )
 
 #technical_term(name: `inject_irq`)[
     Virtual IRQをInjectする．
 ]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
-    "word", "irq_number", "InjectするIRQ Number",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual CPUへのDescriptor",
+        "word", "irq_number", "InjectするIRQ Number",
+    ),
+    caption: [`inject_irq`の引数]
 )
 
 #pagebreak()
@@ -1579,20 +1664,26 @@ Virtual Address Space CapabilityはVirtual CPUのPhysical Address Spaceを抽象
 
 #technical_term(name: `map`)[Virtual Page TableやFrameをGuest Physical Address SpaceにMapする．]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
-    "capability_descriptor", "memory_descriptor", [対象にMapするVirtual Page Table \ もしくはFrameへのDescriptor],
-    "virtual_address", "address", "MapするPhysical Address",
-    "memory_attribute", "attribute", "Mapに使用する属性",
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
+        "capability_descriptor", "memory_descriptor", [対象にMapするVirtual Page Table \ もしくはFrameへのDescriptor],
+        "virtual_address", "address", "MapするPhysical Address",
+        "memory_attribute", "attribute", "Mapに使用する属性",
+    ),
+    caption: [`map`の引数]
 )
 
 #technical_term(name: `unmap`)[Virtual Page TableやFrameをGuest Physical Address SpaceからUnmapする．]
 
-#api_table(
-    "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
-    "capability_descriptor", "memory_descriptor", [対象からUnmapするVirtual Page Table \ もしくはFrameへのDescriptor],
-    "virtual_address", "address", "UnmapするPhysical Address",
-)
+#figure(
+    api_table(
+        "capability_descriptor", "target_descriptor", "対象Virtual Address SpaceへのDescriptor",
+        "capability_descriptor", "memory_descriptor", [対象からUnmapするVirtual Page Table \ もしくはFrameへのDescriptor],
+        "virtual_address", "address", "UnmapするPhysical Address",
+    ),
+    caption: [`unmap`の引数]
+    )
 
 #technical_term(name: `get_unset_depth`)[Virtual Address SpaceにPhysical AddressをMapするうえで，まだMapされていないVirtual Page TableのDepthを取得する．]
 
