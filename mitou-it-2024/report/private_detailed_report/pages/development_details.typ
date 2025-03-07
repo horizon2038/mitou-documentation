@@ -1972,7 +1972,7 @@ Init Infoの内容を書き込むAddressは簡単な計算で求めることが�
 
 === Build System <a9n::build_system>
 
-以前のA9N MicrokernelはMakefileによってBootloaderやInit Serverと統合してBuildされていたが，正しくが分割されておらず本質的にArchitecture-Dependentであった．これを解決するため，現在は構造化されたCMakeによってBuildされるように変更された．具体的な構成を以下に示す (cf., @a9n::build_system::cmake)：
+以前のA9N MicrokernelはMakefileによってBootloaderやInit Serverと統合してBuildされていたが，正しく分割されておらず本質的にArchitecture-Dependentであった．これを解決するため，現在は構造化されたCMakeによってBuildされるように変更された．具体的な構成を以下に示す (cf., @a9n::build_system::cmake)：
 
 #figure(
     diagram(
@@ -2141,7 +2141,7 @@ x86_64におけるCustom Targetは以下のように定義される (cf., @nun::
 
 NunはRustのStandard LibraryやStartup Runtimeを提供するものではない．そのため，Startupに必要なArchitecture-Dependentな処理とArchitecture-Independentな処理を適切に分配しつつEntry Pointを定義する機構を実装した．
 
-`nun::entry!`はRustにおける宣言的Macroであり，() のように使用することでUser-DefinedなEntry Pointを指定できる．
+`nun::entry!`はRustにおける宣言的Macroであり，@nun::entry のように使用することでUser-DefinedなEntry Pointを指定できる．
 
 #figure(
     ```rust
@@ -2153,7 +2153,7 @@ NunはRustのStandard LibraryやStartup Runtimeを提供するものではない
     }
     ```,
     caption: "User-Defined Entry Point"
-)
+) <nun::entry>
 
 これは以下（cf., @nun::entry_point::sequence）に示すFlowで処理を実現する．
 
